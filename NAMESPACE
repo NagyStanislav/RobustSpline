@@ -1,0 +1,4 @@
+useDynLib(RobustSpline, .registration=TRUE)
+importFrom(Rcpp, evalCpp)
+import(deldir)
+exportPattern("^[[:alpha:]]+")
