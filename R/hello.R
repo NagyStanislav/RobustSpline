@@ -635,6 +635,135 @@ eta = function(x,d,m){
                        x^{2*m-d})
 }
 
+#' Pre-processing Raw Data for Thin-Plate Multivariate Location Estimation
+#'
+#' Given the discretely observed functional data as an input, pre-processes the 
+#' dataset to a form suitable for fitting thin-plate spline functional location
+#' estimation.
+#'
+#' @param Y Matrix of observed values of functional data \code{Y} of size 
+#'  \code{p}-times-\code{n}, one column per functional observation, 
+#'  rows corresponding to the positions in the rows of \code{tobs}. Also 
+#'  possible to be supplied as a long vector of length \code{p*n}, stacked by
+#'  columns of the matrix \code{Y}.
+#'  
+#' @param tobs Domain locations for the observed points of \code{X}. Matrix
+#'  of size \code{p}-times-\code{d}, one row per domain point.
+#' 
+#' @param m Order of the thin-plate spline, positive integer.
+#' 
+#' @return A list of values:
+#' \itemize{
+#'  \item{"Y"}{ A vector of length \code{p*n} of the reponses. If \code{Y} was
+#'  a matrix, this is simply \code{c(Y)}; if \code{Y} was a vector, this is
+#'  directly \code{Y}.}
+#'  \item{"Z"}{ A matrix of size \code{p*n}-times-\code{p} for fitting the 
+#'  penalized robust regression model for thin-plate coefficients.}
+#'  \item{"H"}{ A penalty matrix of size \code{p}-times-\code{p} used for
+#'  fitting the location estimation model with thin-plate splines.}
+#'  \item{"Q"}{ A matrix containing the null space of the rows of Phi of size
+#'  \code{p}-times-\code{p-M}, where \code{M} is the number of monomials
+#'  used for the construction of the thin-plate spline. This matrix is used to
+#'  pass from parameters gamma to parametrization chi.}
+#'  \item{"Omega"}{ A matrix of size \code{p}-times-\code{p} containing the 
+#'  \link{eta}-transformed matrix of inter-point distances in \code{tobs}.}
+#'  \item{"Phi"}{ A matrix of size \code{p}-times-\code{M} corresponding to the
+#'  monomial part of the thin-plate spline.}
+#'  \item{"degs"}{ A matrix of size \code{M}-times-\code{d} with degrees of the
+#'  monomials in each dimension per row. Used for the construction of 
+#'  \code{Phi}.}
+#'  \item{"tobs"}{ The same as the input parameter \code{tobs}, for later use.}
+#'  \item{"M"}{ Number of all monomials used, is equal to 
+#'  \code{choose(m+d-1,d)}.}
+#'  \item{"m"}{ Order of the spline, positive integer.}
+#'  \item{"p"}{ Number of observed time points, positive integer.}
+#'  \item{"d"}{ Dimension of domain, positive integer.}
+#'  \item{"n"}{ Sample size, positive integer.}
+#' }
+#'
+#' @examples
+#' d = 1  # dimension of the domain
+#' m = 50 # number of observation times per function
+#' tobs = matrix(runif(m*d), ncol=d) # matrix of observation times
+#' n = 20 # sample size
+#' truemeanf = function(x) 10+15*x[1]^2 # true mean function
+#' truemean = apply(tobs,1,truemeanf) # discretized values of the true mean
+#' Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functiona data, size p*n
+#' tsp = ts_preprocess_location(Y, tobs, 2) # preprocessing matrices 
+#' 
+#' lambda0 = 1e-5 # regularization parameter
+#' res_IRLS = IRLS(Z = tsp$Z, Y = tsp$Y, lambda = lambda0, H = tsp$H, type = "square")
+#' res_ridge = ridge(Z = tsp$Z, Y = tsp$Y, lambda = lambda0, H = tsp$H)
+#' # resulting estimates of the parameters theta, using IRLS and ridge
+#' 
+#' # testing that ridge and IRLS (square) give the same results
+#' all.equal(res_IRLS$theta_hat, res_ridge$theta_hat)
+#' 
+#' res = res_ridge
+#' resf = transform_theta_location(res$theta_hat, tsp)
+#' 
+#' plot(rep(tobs,n), c(Y), cex=.2, pch=16)
+#' points(tobs, truemean, pch=16, col="orange")
+#' points(tobs, resf$beta_hat, col=2, pch=16)
+
+ts_preprocess_location = function(Y, tobs, m){
+  
+  p = nrow(tobs) # number of observations per curve
+  d = ncol(tobs)
+  if(is.matrix(Y)){
+    if(nrow(Y)!=p) 
+      stop("If Y is matrix, its number of rows must equal 
+           the number of columns of t.")
+    n = ncol(Y)
+    Y = c(Y) # stack into a large vector of length p*n
+  } else {
+    n = length(Y)/p
+    if(n%%1!=0) stop("The length of Y is not divisible by the number
+                     of columns of t.")
+  }
+  
+  M = choose(m+d-1,d)
+  if(p-M<=0) stop(paste("p must be larger than",M))
+  if(2*m<=d) stop(paste("m must be larger than",ceil(d/2)))
+  
+  # Monomials phi of order <m
+  allcom = expand.grid(replicate(d, 0:(m-1), simplify=FALSE))
+  degs = as.matrix(allcom[rowSums(allcom)<m,,drop=FALSE])
+  M = nrow(degs)
+  if(M!=choose(m+d-1,d)) stop("Error in degrees of polynomials")
+  
+  # Fast matrix of Euclidean distances
+  Em = matrix(sqrt(rowSums(
+    apply(tobs,2,function(x) outer(x,x,"-")^2))),nrow=nrow(tobs))
+  
+  # Matrix Omega for the penalty term
+  Omega = eta(Em,d,m)
+  
+  # Matrix Phi, monomials evaluated at tobs
+  Phi = apply(degs,1,function(x) apply(t(tobs)^x,2,prod))
+  # Phi = matrix(nrow=p,ncol=M)
+  # for(i in 1:p) for(j in 1:M) Phi[i,j] = prod(tobs[i,]^degs[j,])
+  
+  # Null space of the rows of Phi p-(p-M)
+  Q = MASS::Null(Phi)
+  
+  # Test that t(Phi)%*%Q = 0
+  if(max(abs(t(Phi)%*%Q))>1e-4) 
+    stop("Problem in computing the null space")
+  if(ncol(Q)!=p-M) 
+    stop("Problem in computing the null space")
+  
+  A = Omega%*%Q
+  H = matrix(0, nrow=p, ncol=p)
+  H[1:(p-M),1:(p-M)] = t(Q)%*%A
+  Z = cbind(Omega%*%Q, Phi) # matrix p-times-p
+  Z = do.call("rbind", replicate(n, Z, simplify = FALSE)) # 
+  # replicates the matrix Z n-times, and then builds a final matrix
+  
+  return(list(Y=Y, Z=Z, H=H, Q=Q, Omega=Omega, Phi=Phi, 
+              degs=degs, tobs=tobs, M=M, m=m, p=p, d=d, n=n))
+}
+
 #' Pre-processing Raw Data for Thin-Plate Spline Regression
 #'
 #' Given the data generated by \link{generate} as an input, pre-processes the 
@@ -690,7 +819,7 @@ eta = function(x,d,m){
 #'  used for the construction of the thin-plate spline. This matrix is used to
 #'  pass from parameters gamma to parametrization chi.}
 #'  \item{"Omega"}{ A matrix of size \code{p}-times-\code{p} containing the 
-#'  \link{eta}-transformed matrix of inter-point distances in \code{tobj}.}
+#'  \link{eta}-transformed matrix of inter-point distances in \code{tobs}.}
 #'  \item{"Phi"}{ A matrix of size \code{p}-times-\code{M} corresponding to the
 #'  monomial part of the thin-plate spline.}
 #'  \item{"degs"}{ A matrix of size \code{M}-times-\code{d} with degrees of the
@@ -940,6 +1069,74 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
     if(scale) ret = ret/sum(ret) # scaling for total sum 1
     return(unname(ret))
   }
+}
+
+#' Transform the vector of estimated coefficients for location estimation
+#'
+#' Splits the vector of raw estimated coefficients (output of functions 
+#' \link{IRLS} or \link{ridge}) after performing \link{ts_preprocess_locationi} 
+#' into parts interpretable in the setup of thin-plate spline location 
+#' estimation.
+#'
+#' @param theta Output vector of raw results of length \code{p} from function
+#' \link{IRLS} or \link{ridge}.
+#'
+#' @param tspr Output of \link{ts_preprocess_location}.
+#'
+#' @return A list of estimated parameters:
+#' \itemize{
+#'  \item{"xi_hat"}{ Estimate of \code{xi}, the part of the parameters that
+#'  correspond to matrix \code{Omega} when transformed by \code{Q}. A vector
+#'  of length \code{(p-M)}.}
+#'  \item{"delta_hat"}{ Estimate of \code{delta}, the part of the parameters that
+#'  correspond to matrix \code{Phi}. A vector of length \code{M}, the number of
+#'  monomials used for the construction of the thin-plate spline.}
+#'  \item{"gamma_hat"}{ Estimate of \code{gamma}, the part of the parameters that
+#'  correspond to matrix \code{Omega}. It holds true that 
+#'  \code{gamma_hat = Q*xi_hat}. A vector of length \code{p}.}
+#'  \item{"beta_hat"}{ Estimate of the location parameter \code{mu} 
+#'  evaluated at the \code{p} points from \code{tobs}, where \code{Y} was
+#'  observed.}
+#' }
+#'
+#' @examples
+#' d = 1  # dimension of the domain
+#' m = 50 # number of observation times per function
+#' tobs = matrix(runif(m*d), ncol=d) # matrix of observation times
+#' n = 20 # sample size
+#' truemeanf = function(x) 10+15*x[1]^2 # true mean function
+#' truemean = apply(tobs,1,truemeanf) # discretized values of the true mean
+#' Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functiona data, size p*n
+#' tsp = ts_preprocess_location(Y, tobs, 2) # preprocessing matrices 
+#' 
+#' lambda0 = 1e-5 # regularization parameter
+#' res_IRLS = IRLS(Z = tsp$Z, Y = tsp$Y, lambda = lambda0, H = tsp$H, type = "square")
+#' res_ridge = ridge(Z = tsp$Z, Y = tsp$Y, lambda = lambda0, H = tsp$H)
+#' # resulting estimates of the parameters theta, using IRLS and ridge
+#' 
+#' # testing that ridge and IRLS (square) give the same results
+#' all.equal(res_IRLS$theta_hat, res_ridge$theta_hat)
+#' 
+#' res = res_ridge
+#' resf = transform_theta_location(res$theta_hat, tsp)
+#' 
+#' plot(rep(tobs,n), c(Y), cex=.2, pch=16)
+#' points(tobs, truemean, pch=16, col="orange")
+#' points(tobs, resf$beta_hat, col=2, pch=16)
+
+transform_theta_location = function(theta,tspr){
+  p = tspr$p
+  M = tspr$M
+  Q = tspr$Q
+  Omega = tspr$Omega
+  Phi = tspr$Phi
+  xihat=theta[1:(p-M)]
+  dhat=theta[(p-M+1):p]
+  ghat = Q%*%xihat
+  return(list(xi_hat=xihat,
+              delta_hat=dhat,
+              gamma_hat=ghat,
+              beta_hat = c(Omega%*%ghat + Phi%*%dhat)))
 }
 
 #' Transform the vector of estimated regression coefficients
@@ -1961,6 +2158,11 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' @param I Two numbers \code{I[1]<I[2]} determining the box 
 #' \code{[I[1],I[2]]^d} where all the interpolated functions are evaluated. 
 #' 
+#' @param solve.method Indicator of which solver of systems of linear equations
+#' to use for the inversion of the matrices in the interpolation procedure. 
+#' Possible options are \code{"C"} for the solver from \code{Armadillo} library
+#' in \code{C++}, or \code{R} for the function \link[base]{solve} from \code{R}. 
+#' 
 #' @return A list of values:
 #' \itemize{
 #'  \item{"X"}{ A matrix of size \code{n}-times-\code{p.out^d} of the function
@@ -2001,8 +2203,10 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #'  rgl::points3d(intr$tobs[,1], intr$tobs[,2], intr$X[i,],col="red",add=TRUE)
 #'}
 
-ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1)){
+ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1), 
+                          solve.method=c("C","R")){
   
+  solve.method = match.arg(solve.method)
   n = length(Xtobs)
   d = ncol(Xtobs[[1]]$tobs)
   
@@ -2043,7 +2247,8 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1)){
     
     A = rbind(cbind(Omega, Phi),cbind(t(Phi), matrix(0, nrow=M, ncol=M)))
     b = c(X,rep(0,M))
-    coefs = solve(A,b, tol = 1e-21)
+    if(solve.method=="R") coefs = solve(A,b, tol = 1e-21)
+    if(solve.method=="C") coefs = c(solveC(A,matrix(b,ncol=1)))
     #
     gamma = coefs[1:p]
     delta = coefs[-(1:p)]

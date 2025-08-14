@@ -39,6 +39,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// solveC
+arma::mat solveC(arma::mat A, arma::mat B);
+RcppExport SEXP _RobustSpline_solveC(SEXP ASEXP, SEXP BSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type A(ASEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type B(BSEXP);
+    rcpp_result_gen = Rcpp::wrap(solveC(A, B));
+    return rcpp_result_gen;
+END_RCPP
+}
 // psiwC
 arma::vec psiwC(arma::vec t, int type, double tuning);
 RcppExport SEXP _RobustSpline_psiwC(SEXP tSEXP, SEXP typeSEXP, SEXP tuningSEXP) {
@@ -90,6 +102,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_distn", (DL_FUNC) &_RobustSpline_distn, 3},
     {"_RobustSpline_distnAB", (DL_FUNC) &_RobustSpline_distnAB, 5},
+    {"_RobustSpline_solveC", (DL_FUNC) &_RobustSpline_solveC, 2},
     {"_RobustSpline_psiwC", (DL_FUNC) &_RobustSpline_psiwC, 3},
     {"_RobustSpline_IRLSC", (DL_FUNC) &_RobustSpline_IRLSC, 10},
     {"_RobustSpline_ridgeC", (DL_FUNC) &_RobustSpline_ridgeC, 4},

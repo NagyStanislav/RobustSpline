@@ -9,6 +9,10 @@ distnAB <- function(A, B, m, n, d) {
     .Call(`_RobustSpline_distnAB`, A, B, m, n, d)
 }
 
+solveC <- function(A, B) {
+    .Call(`_RobustSpline_solveC`, A, B)
+}
+
 psiwC <- function(t, type, tuning) {
     .Call(`_RobustSpline_psiwC`, t, type, tuning)
 }

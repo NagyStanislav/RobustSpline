@@ -4,7 +4,7 @@
 \alias{ts_interpolate}
 \title{Interpolating Functional Data Using Thin-Plate Splines}
 \usage{
-ts_interpolate(Xtobs, r, p.out = 101, I = c(0, 1))
+ts_interpolate(Xtobs, r, p.out = 101, I = c(0, 1), solve.method = c("C", "R"))
 }
 \arguments{
 \item{Xtobs}{A list of length \code{n}, each element of \code{Xtobs} is a 
@@ -26,6 +26,11 @@ each function is evaluated.}
 
 \item{I}{Two numbers \code{I[1]<I[2]} determining the box 
 \code{[I[1],I[2]]^d} where all the interpolated functions are evaluated.}
+
+\item{solve.method}{Indicator of which solver of systems of linear equations
+to use for the inversion of the matrices in the interpolation procedure. 
+Possible options are \code{"C"} for the solver from \code{Armadillo} library
+in \code{C++}, or \code{R} for the function \link[base]{solve} from \code{R}.}
 }
 \value{
 A list of values:

@@ -58,7 +58,7 @@ A list of values:
  used for the construction of the thin-plate spline. This matrix is used to
  pass from parameters gamma to parametrization chi.}
  \item{"Omega"}{ A matrix of size \code{p}-times-\code{p} containing the 
- \link{eta}-transformed matrix of inter-point distances in \code{tobj}.}
+ \link{eta}-transformed matrix of inter-point distances in \code{tobs}.}
  \item{"Phi"}{ A matrix of size \code{p}-times-\code{M} corresponding to the
  monomial part of the thin-plate spline.}
  \item{"degs"}{ A matrix of size \code{M}-times-\code{d} with degrees of the

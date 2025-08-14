@@ -36,3 +36,10 @@ arma::mat distnAB(arma::mat A, arma::mat B, int m, int n, int d)
   }
   return(res);
 }
+
+// [[Rcpp::export]]
+arma::mat solveC(arma::mat A, arma::mat B)
+{
+  // solve function implemented in armadillo
+  return(solve(A, B));
+}
