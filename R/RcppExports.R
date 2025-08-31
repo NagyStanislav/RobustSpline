@@ -17,11 +17,11 @@ psiwC <- function(t, type, tuning) {
     .Call(`_RobustSpline_psiwC`, t, type, tuning)
 }
 
-IRLSC <- function(Z, Y, lambda, H, type, sc, residsin, tuning, toler, imax) {
-    .Call(`_RobustSpline_IRLSC`, Z, Y, lambda, H, type, sc, residsin, tuning, toler, imax)
+IRLSC <- function(Z, Y, lambda, H, type, W, sc, residsin, tuning, toler, imax) {
+    .Call(`_RobustSpline_IRLSC`, Z, Y, lambda, H, type, W, sc, residsin, tuning, toler, imax)
 }
 
-ridgeC <- function(Z, Y, lambda, H) {
-    .Call(`_RobustSpline_ridgeC`, Z, Y, lambda, H)
+ridgeC <- function(Z, Y, lambda, H, W) {
+    .Call(`_RobustSpline_ridgeC`, Z, Y, lambda, H, W)
 }
 

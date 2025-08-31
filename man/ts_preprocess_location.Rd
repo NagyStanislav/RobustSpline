@@ -4,27 +4,31 @@
 \alias{ts_preprocess_location}
 \title{Pre-processing Raw Data for Thin-Plate Multivariate Location Estimation}
 \usage{
-ts_preprocess_location(Y, tobs, m)
+ts_preprocess_location(Y, tobs, r)
 }
 \arguments{
 \item{Y}{Matrix of observed values of functional data \code{Y} of size 
 \code{p}-times-\code{n}, one column per functional observation, 
-rows corresponding to the positions in the rows of \code{tobs}. Also 
+rows corresponding to the positions in the rows of \code{tobs}. If matrix
+\code{Y} does not contain any missing values \code{NA}, it is also 
 possible to be supplied as a long vector of length \code{p*n}, stacked by
-columns of the matrix \code{Y}.}
+columns of the matrix \code{Y}. If \code{Y} contains missing values 
+\code{NA}, it must be a matrix.}
 
 \item{tobs}{Domain locations for the observed points of \code{X}. Matrix
 of size \code{p}-times-\code{d}, one row per domain point.}
 
-\item{m}{Order of the thin-plate spline, positive integer.}
+\item{r}{Order of the thin-plate spline, positive integer.}
 }
 \value{
 A list of values:
 \itemize{
- \item{"Y"}{ A vector of length \code{p*n} of the reponses. If \code{Y} was
- a matrix, this is simply \code{c(Y)}; if \code{Y} was a vector, this is
- directly \code{Y}.}
- \item{"Z"}{ A matrix of size \code{p*n}-times-\code{p} for fitting the 
+ \item{"Y"}{ A vector of length \code{m} of all the reponses that are not 
+ missing. If \code{Y} was a matrix without missing values, this is simply 
+ \code{c(Y)}; if \code{Y} was a vector, this is directly \code{Y}. In case
+ \code{Y} contained missing values, this is the elements of \code{c(Y)} that
+ are not \code{NA}.}
+ \item{"Z"}{ A matrix of size \code{m}-times-\code{p} for fitting the 
  penalized robust regression model for thin-plate coefficients.}
  \item{"H"}{ A penalty matrix of size \code{p}-times-\code{p} used for
  fitting the location estimation model with thin-plate splines.}
@@ -36,13 +40,16 @@ A list of values:
  \link{eta}-transformed matrix of inter-point distances in \code{tobs}.}
  \item{"Phi"}{ A matrix of size \code{p}-times-\code{M} corresponding to the
  monomial part of the thin-plate spline.}
+ \item{"w"}{ A vector of weights of length \code{m}. Each weight corresponds
+ to \code{1/(n*m[i])}, where \code{m[i]} is the number of observations for 
+ the \code{i}-th function.}
  \item{"degs"}{ A matrix of size \code{M}-times-\code{d} with degrees of the
  monomials in each dimension per row. Used for the construction of 
  \code{Phi}.}
  \item{"tobs"}{ The same as the input parameter \code{tobs}, for later use.}
  \item{"M"}{ Number of all monomials used, is equal to 
  \code{choose(m+d-1,d)}.}
- \item{"m"}{ Order of the spline, positive integer.}
+ \item{"r"}{ Order of the spline, positive integer.}
  \item{"p"}{ Number of observed time points, positive integer.}
  \item{"d"}{ Dimension of domain, positive integer.}
  \item{"n"}{ Sample size, positive integer.}

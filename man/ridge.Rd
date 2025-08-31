@@ -4,7 +4,7 @@
 \alias{ridge}
 \title{Fast Ridge Regression with given penalty matrix}
 \usage{
-ridge(Z, Y, lambda, H, vrs = "C", toler_solve = 1e-35)
+ridge(Z, Y, lambda, H, w = NULL, vrs = "C", toler_solve = 1e-35)
 }
 \arguments{
 \item{Z}{Data matrix of dimension \code{n}-times-\code{p}, where \code{n} is
@@ -16,6 +16,10 @@ the number of observations, \code{p} is the dimension.}
 
 \item{H}{Penalty matrix of size \code{p}-times-\code{p} that
 is used inside the quadratic term for penalizing estimated parameters.}
+
+\item{w}{Vector of length \code{n} of weights attached to the elements of 
+\code{Y}. If \code{w=NULL} (default), a constant vector with values 
+\code{1/n} is used.}
 
 \item{vrs}{Version of the algorhitm to be used. The program is prepared in
 two versions: i) \code{vrs="C"} calls the \code{C++} version of the 
@@ -47,7 +51,7 @@ A list composed of:
 }
 }
 \description{
-A ridge regression estimator with a specified penalty matrix
+A (weighted) ridge regression estimator with a specified penalty matrix
 in a linear regression model. The solution corresponds to the 
 result of function \link{IRLS} with \code{type="square"}.
 }

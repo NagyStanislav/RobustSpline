@@ -10,6 +10,7 @@ IRLS(
   lambda,
   H,
   type,
+  w = NULL,
   sc = 1,
   resids.in = rep(1, length(Y)),
   tuning = NULL,
@@ -37,6 +38,10 @@ Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|};
 \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
 \code{type="logistic"} for the logistic loss 
 \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.}
+
+\item{w}{Vector of length \code{n} of weights attached to the elements of 
+\code{Y}. If \code{w=NULL} (default), a constant vector with values 
+\code{1/n} is used.}
 
 \item{sc}{Scale parameter to be used in the IRLS. By default \code{sc=1}, 
 that is no scaling is performed.}
@@ -102,7 +107,7 @@ A list composed of:
 \description{
 Iteratively Reweighted Least Squares (IRLS) algorithm that is used to 
 estimate a vector of regression parameters in a (possibly robust and 
-penalized) linear regression model.
+penalized) linear regression model. Weights can be supplied as well.
 }
 \details{
 Especially for extremely small values of \code{lambda}, numerically

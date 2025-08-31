@@ -2,7 +2,7 @@
 #'
 #' Iteratively Reweighted Least Squares (IRLS) algorithm that is used to 
 #' estimate a vector of regression parameters in a (possibly robust and 
-#' penalized) linear regression model. 
+#' penalized) linear regression model. Weights can be supplied as well.
 #'
 #' @param Z Data matrix of dimension \code{n}-times-\code{p}, where \code{n} is
 #' the number of observations, \code{p} is the dimension.
@@ -21,6 +21,10 @@
 #' \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
 #' \code{type="logistic"} for the logistic loss 
 #' \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.
+#'
+#' @param w Vector of length \code{n} of weights attached to the elements of 
+#' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
+#' \code{1/n} is used.
 #'
 #' @param sc Scale parameter to be used in the IRLS. By default \code{sc=1}, 
 #' that is no scaling is performed.
@@ -118,26 +122,31 @@
 #' # Visualise the difference between the results
 #' plot(res_C$theta_hat ~ res_R$theta_hat)
 
-IRLS = function(Z, Y, lambda, H, type, sc = 1, resids.in = rep(1,length(Y)), 
+IRLS = function(Z, Y, lambda, H, type, w=NULL, sc = 1, 
+                resids.in = rep(1,length(Y)), 
                 tuning=NULL, toler=1e-7, imax=1000, vrs="C", 
                 toler_solve=1e-35){
-
-  IRLS_R <- function(Z, Y, lambda, H, type, sc, resids.in, 
-                     tuning, toler, imax, toler_solve){
+  
+  IRLS_R <- function(Z, Y, lambda, H, type, w=NULL, sc, resids.in, 
+                      tuning, toler, imax, toler_solve){
     n = length(Y)
+    if(is.null(w)) w = rep(1/n,n)
+    if(length(w)!=n) stop("Weights w must have the same length as Y.")
     ic = 0
     istop = 0
     clim = c(.5, 1, .5*tuning, 1)[type] # tail behavior constant for psiw
     while(istop == 0 & ic < imax){
       ic = ic + 1
       #
-      Wdiag = c(psiw(resids.in/sc,type,tuning)/sc^2)
-      Wdiag[(is.na(Wdiag)) & (abs(resids.in)<tuning)] = 1 # division 0/0
-      Wdiag[(is.na(Wdiag))] = clim/abs(resids.in*sc) 
+      Wdiag = c(w*psiw(resids.in/sc,type,tuning)/sc^2)
+      naind = (is.na(Wdiag)) & (abs(resids.in)<tuning)
+      Wdiag[naind] = w[naind]*1 # division 0/0
+      naind = (is.na(Wdiag))
+      Wdiag[naind] = w[naind]*clim/abs(resids.in*sc) 
       # if resids are too small exp(-resids) ~ Inf but in the limit always
       # psiw(t) ~ clim/abs(t)
       Z.s = scale(t(Z), center = FALSE, scale = 1/Wdiag);
-      Z1 = Z.s%*%Z + n*lambda*H
+      Z1 = Z.s%*%Z + lambda*H
       theta_new = solve(Z1, Z.s%*%Y, tol=toler_solve)
       resids1 <- c(Y - Z%*%theta_new)
       check = max(abs(resids1-resids.in)) 
@@ -158,7 +167,9 @@ IRLS = function(Z, Y, lambda, H, type, sc = 1, resids.in = rep(1,length(Y)),
                 weights = 2*Wdiag,
                 fitted = hatm%*%Y))
   }
-    
+  
+  n = length(Y)
+  if(is.null(w)) w = rep(1/n,n)
   vrs = match.arg(vrs,c("C","R"))
   type = match.arg(type,c("square","absolute","Huber","logistic"))
   type = switch(type, absolute = 1, square = 2, Huber = 3, logistic = 4)
@@ -185,22 +196,22 @@ IRLS = function(Z, Y, lambda, H, type, sc = 1, resids.in = rep(1,length(Y)),
     rs = tryCatch(
       error = function(cnd){
         warning(paste0("Solve in C++ crashed, switching to R version, ",cnd))
-        IRLS_R(Z, Y, lambda, H, type, sc, resids.in, 
+        IRLS_R(Z, Y, lambda, H, type, w, sc, resids.in, 
                tuning, toler, imax, toler_solve)
       }, {
-        IRLSC(Z, Y, lambda, H, type, sc, resids.in, 
+        IRLSC(Z, Y, lambda, H, type, w, sc, resids.in, 
               tuning, toler, imax)
       })
     return(rs)
   }
   
-  if(vrs=="R") return(IRLS_R(Z, Y, lambda, H, type, sc, resids.in, 
-                        tuning, toler, imax, toler_solve))
+  if(vrs=="R") return(IRLS_R(Z, Y, lambda, H, type, w, sc, resids.in, 
+                             tuning, toler, imax, toler_solve))
 }
 
 #' Fast Ridge Regression with given penalty matrix
 #'
-#' A ridge regression estimator with a specified penalty matrix
+#' A (weighted) ridge regression estimator with a specified penalty matrix
 #' in a linear regression model. The solution corresponds to the 
 #' result of function \link{IRLS} with \code{type="square"}.
 #'
@@ -213,6 +224,10 @@ IRLS = function(Z, Y, lambda, H, type, sc = 1, resids.in = rep(1,length(Y)),
 #'
 #' @param H Penalty matrix of size \code{p}-times-\code{p} that
 #' is used inside the quadratic term for penalizing estimated parameters.
+#' 
+#' @param w Vector of length \code{n} of weights attached to the elements of 
+#' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
+#' \code{1/n} is used.
 #' 
 #' @param vrs Version of the algorhitm to be used. The program is prepared in
 #' two versions: i) \code{vrs="C"} calls the \code{C++} version of the 
@@ -273,8 +288,10 @@ IRLS = function(Z, Y, lambda, H, type, sc = 1, resids.in = rep(1,length(Y)),
 #' res_IRLS = IRLS(Z, Y, lambda, H, type="square")
 #' max(abs(res_C$theta_hat-res_IRLS$theta_hat))
 
-ridge = function(Z, Y, lambda, H, vrs="C", toler_solve=1e-35){
+ridge = function(Z, Y, lambda, H, w=NULL, vrs="C", toler_solve=1e-35){
   
+  n = length(Y)
+  if(is.null(w)) w = rep(1/n,n)
   vrs = match.arg(vrs,c("C","R"))
   if(nrow(Z)!=length(Y)) 
     stop("Number of rows of Z must equal the lenght of Y.")
@@ -284,21 +301,21 @@ ridge = function(Z, Y, lambda, H, vrs="C", toler_solve=1e-35){
     stop("H must be a square matrix with the same number of columns as Z.")
   if(lambda<0) stop("lambda must be a non-negative number.")
   # if(sc<=0) stop("Scale estimator must be strictly positive.")
-  if(vrs=="C") return(ridgeC(Z, Y, lambda, H))
+  if(vrs=="C") return(ridgeC(Z, Y, lambda, H, w))
   
-  ridge_R <- function(Z, Y, lambda, H, toler_solve){
+  ridge_R <- function(Z, Y, lambda, H, w=NULL, toler_solve){
     n = length(Y)
-    th = solve(t(Z)%*%Z+n*lambda*H,t(Z)%*%Y,tol=toler_solve)
-    hat = Z%*%solve(t(Z)%*%Z+n*lambda*H,t(Z),tol=toler_solve)
+    th = solve(t(Z)%*%diag(w)%*%Z+lambda*H,t(Z)%*%diag(w)%*%Y,
+               tol=toler_solve)
+    hat = Z%*%solve(t(Z)%*%diag(w)%*%Z+lambda*H,t(Z)%*%diag(w),tol=toler_solve)
     resid = Y - Z%*%th
     return(list(theta_hat = th,
                 resids = resid, 
                 hat_values = diag(hat)))
   }
   
-  if(vrs=="R") return(ridge_R(Z, Y, lambda, H, toler_solve))
+  if(vrs=="R") return(ridge_R(Z, Y, lambda, H, w, toler_solve))
 }
-
 
 #' Weight function for the IRLS algorithm
 #'
@@ -643,21 +660,25 @@ eta = function(x,d,m){
 #'
 #' @param Y Matrix of observed values of functional data \code{Y} of size 
 #'  \code{p}-times-\code{n}, one column per functional observation, 
-#'  rows corresponding to the positions in the rows of \code{tobs}. Also 
+#'  rows corresponding to the positions in the rows of \code{tobs}. If matrix
+#'  \code{Y} does not contain any missing values \code{NA}, it is also 
 #'  possible to be supplied as a long vector of length \code{p*n}, stacked by
-#'  columns of the matrix \code{Y}.
+#'  columns of the matrix \code{Y}. If \code{Y} contains missing values 
+#'  \code{NA}, it must be a matrix.
 #'  
 #' @param tobs Domain locations for the observed points of \code{X}. Matrix
 #'  of size \code{p}-times-\code{d}, one row per domain point.
 #' 
-#' @param m Order of the thin-plate spline, positive integer.
+#' @param r Order of the thin-plate spline, positive integer.
 #' 
 #' @return A list of values:
 #' \itemize{
-#'  \item{"Y"}{ A vector of length \code{p*n} of the reponses. If \code{Y} was
-#'  a matrix, this is simply \code{c(Y)}; if \code{Y} was a vector, this is
-#'  directly \code{Y}.}
-#'  \item{"Z"}{ A matrix of size \code{p*n}-times-\code{p} for fitting the 
+#'  \item{"Y"}{ A vector of length \code{m} of all the reponses that are not 
+#'  missing. If \code{Y} was a matrix without missing values, this is simply 
+#'  \code{c(Y)}; if \code{Y} was a vector, this is directly \code{Y}. In case
+#'  \code{Y} contained missing values, this is the elements of \code{c(Y)} that
+#'  are not \code{NA}.}
+#'  \item{"Z"}{ A matrix of size \code{m}-times-\code{p} for fitting the 
 #'  penalized robust regression model for thin-plate coefficients.}
 #'  \item{"H"}{ A penalty matrix of size \code{p}-times-\code{p} used for
 #'  fitting the location estimation model with thin-plate splines.}
@@ -669,13 +690,16 @@ eta = function(x,d,m){
 #'  \link{eta}-transformed matrix of inter-point distances in \code{tobs}.}
 #'  \item{"Phi"}{ A matrix of size \code{p}-times-\code{M} corresponding to the
 #'  monomial part of the thin-plate spline.}
+#'  \item{"w"}{ A vector of weights of length \code{m}. Each weight corresponds
+#'  to \code{1/(n*m[i])}, where \code{m[i]} is the number of observations for 
+#'  the \code{i}-th function.}
 #'  \item{"degs"}{ A matrix of size \code{M}-times-\code{d} with degrees of the
 #'  monomials in each dimension per row. Used for the construction of 
 #'  \code{Phi}.}
 #'  \item{"tobs"}{ The same as the input parameter \code{tobs}, for later use.}
 #'  \item{"M"}{ Number of all monomials used, is equal to 
 #'  \code{choose(m+d-1,d)}.}
-#'  \item{"m"}{ Order of the spline, positive integer.}
+#'  \item{"r"}{ Order of the spline, positive integer.}
 #'  \item{"p"}{ Number of observed time points, positive integer.}
 #'  \item{"d"}{ Dimension of domain, positive integer.}
 #'  \item{"n"}{ Sample size, positive integer.}
@@ -706,38 +730,69 @@ eta = function(x,d,m){
 #' points(tobs, truemean, pch=16, col="orange")
 #' points(tobs, resf$beta_hat, col=2, pch=16)
 
-ts_preprocess_location = function(Y, tobs, m){
+ts_preprocess_location = function(Y, tobs, r){
   
-  p = nrow(tobs) # number of observations per curve
-  d = ncol(tobs)
-  if(is.matrix(Y)){
+  # Y Observed values of functional data of size \code{p}-times-\code{n}
+  # tobs Domain locations for the observed points of size \code{p}-times-\code{d}
+  # r Order of the thin-plate spline, positive integer.
+  
+  p = nrow(tobs)    # number of distinct observation points
+  d = ncol(tobs)    # dimension of the domain
+  
+  ### preparing the vector of effective values of the response
+  if(sum(is.na(Y))==0){ 
+    # if the design of observation is full, also vector Y is accepted
+    if(is.matrix(Y)){
+      if(nrow(Y)!=p) 
+        stop("If Y is matrix, its number of rows must equal 
+             the number of columns of tobs.")
+      n = ncol(Y)
+      Y = c(Y) # stack into a large vector of length p*n
+    } else {
+      n = length(Y)/p
+      if(n%%1!=0) stop("The length of Y is not divisible by the number
+                       of columns of tobs.")
+    }
+    w = rep(p,n) # vector of numbers of observations per function (length n)
+    m = p*n      # total number of available observations
+    inds = rep(1:p,n) # list of indices of active (observed) points, concatenated
+  } else { # if the design of observation is not full, 
+    if(!is.matrix(Y)) 
+      stop("If Y contains NA's, only matrix form of Y is accepted.")
+    
     if(nrow(Y)!=p) 
       stop("If Y is matrix, its number of rows must equal 
-           the number of columns of t.")
+             the number of columns of tobs.")
+    
+    inds = apply(Y,2,function(x) which(!is.na(x))) 
+    # list of indices of active (observed) points, one list per function
+    inds = unlist(inds) # concatenated list of indices, length m
+    w = apply(Y, 2, function(x) sum(!is.na(x))) 
+    # vector of numbers of observations per function (length n)
+    Y = Y[,w>0,drop=FALSE]
+    # deleting functions that are never observed
     n = ncol(Y)
-    Y = c(Y) # stack into a large vector of length p*n
-  } else {
-    n = length(Y)/p
-    if(n%%1!=0) stop("The length of Y is not divisible by the number
-                     of columns of t.")
+    m = sum(w) # total number of available observations
+    Y = c(Y)   # stacking Y by columns
+    Y = Y[!is.na(Y)] # vector of length m of clean observed values
   }
   
-  M = choose(m+d-1,d)
+  M = choose(r+d-1,d)
   if(p-M<=0) stop(paste("p must be larger than",M))
-  if(2*m<=d) stop(paste("m must be larger than",ceil(d/2)))
+  if(2*r<=d) stop(paste("r must be larger than",ceil(d/2)))
   
-  # Monomials phi of order <m
-  allcom = expand.grid(replicate(d, 0:(m-1), simplify=FALSE))
-  degs = as.matrix(allcom[rowSums(allcom)<m,,drop=FALSE])
+  # Monomials phi of order <r
+  allcom = expand.grid(replicate(d, 0:(r-1), simplify=FALSE))
+  degs = as.matrix(allcom[rowSums(allcom)<r,,drop=FALSE])
   M = nrow(degs)
-  if(M!=choose(m+d-1,d)) stop("Error in degrees of polynomials")
+  if(M!=choose(r+d-1,d)) stop("Error in degrees of polynomials")
   
   # Fast matrix of Euclidean distances
   Em = matrix(sqrt(rowSums(
     apply(tobs,2,function(x) outer(x,x,"-")^2))),nrow=nrow(tobs))
   
   # Matrix Omega for the penalty term
-  Omega = eta(Em,d,m)
+  Omega = eta(Em,d,r)
   
   # Matrix Phi, monomials evaluated at tobs
   Phi = apply(degs,1,function(x) apply(t(tobs)^x,2,prod))
@@ -757,11 +812,15 @@ ts_preprocess_location = function(Y, tobs, m){
   H = matrix(0, nrow=p, ncol=p)
   H[1:(p-M),1:(p-M)] = t(Q)%*%A
   Z = cbind(Omega%*%Q, Phi) # matrix p-times-p
-  Z = do.call("rbind", replicate(n, Z, simplify = FALSE)) # 
+  Z = Z[inds,] # matrix m-times-p
+  # Z = do.call("rbind", replicate(n, Z, simplify = FALSE)) # 
   # replicates the matrix Z n-times, and then builds a final matrix
   
-  return(list(Y=Y, Z=Z, H=H, Q=Q, Omega=Omega, Phi=Phi, 
-              degs=degs, tobs=tobs, M=M, m=m, p=p, d=d, n=n))
+  # weights attached to observations (length m)
+  w = rep(1/(w*n),w)
+  
+  return(list(Y=Y, Z=Z, H=H, Q=Q, Omega=Omega, Phi=Phi, w=w, 
+              degs=degs, tobs=tobs, M=M, r=r, p=p, d=d, n=n))
 }
 
 #' Pre-processing Raw Data for Thin-Plate Spline Regression
@@ -1124,7 +1183,7 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
 #' points(tobs, truemean, pch=16, col="orange")
 #' points(tobs, resf$beta_hat, col=2, pch=16)
 
-transform_theta_location = function(theta,tspr){
+transform_theta_location = function(theta, tspr){
   p = tspr$p
   M = tspr$M
   Q = tspr$Q
@@ -1374,6 +1433,98 @@ reconstruct = function(ts_prep = NULL,
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give (nearly) identical results, see 
 #' \link{IRLS}.
+#' 
+#' @param custfun A custom function combining the residuals \code{resids} and
+#' the hat values \code{hats}. The result of the function must be numeric, 
+#' see \link{GCV_crit}.
+#' 
+#' @param ... Additional parameters passed to \link{IRLS} function.
+#'
+#' @details Function \code{custfun} has two arguments 
+#' corresponding to \code{resids} and \code{hats}. The output of the function 
+#' must be numeric. 
+#' 
+#' @return A named numerical vector of values. The length of the vector depends
+#' on the input. The vector contains the values:
+#' \itemize{
+#'  \item{"AIC"}{ Akaike's information criterion given by 
+#'  \code{mean(resids^2)+log(n)*mean(hats)}, where \code{n} is the length of
+#'  both \code{resids} and \code{hats}.}
+#'  \item{"GCV"}{ Leave-one-out cross-validation criterion given by
+#'  \code{mean((resids^2)/((1-hats)^2))}.}
+#'  \item{"GCV(tr)"}{ Modified leave-one-out cross-validation criterion 
+#'  given by \code{mean((resids^2)/((1-mean(hats))^2))}.}
+#'  \item{"BIC"}{ Bayes information criterion given by 
+#'  \code{mean(resids^2)+2*mean(hats)}.}
+#'  \item{"rGCV"}{ A robust version of \code{GCV} where mean is replaced
+#'  by a robust M-estimator of scale of \code{resids/(1-hats)}, see 
+#'  \link[robustbase]{scaleTau2} for details.}
+#'  \item{"rGCV(tr)"}{ Modified version of a \code{rGCV} given by 
+#'  a robust M-estimator of scale of \code{resids/(1-mean(hats))}.}
+#'  \item{"custom"}{ The custom criterion given by function \code{custfun}. 
+#'  Works only if \code{custfun} is part of the input.}
+#' }
+#'
+#' @examples
+#' n = 50      # sample size
+#' p = 10      # dimension of predictors
+#' Z = matrix(rnorm(n*p),ncol=p) # design matrix
+#' Y = Z[,1]   # response vector
+#' lambda = 1  # tuning parameter for penalization
+#' H = diag(p) # penalty matrix
+#' type = "absolute" # absolute loss
+#' 
+#' # Run with the IRLS procedure
+#' res = IRLS(Z, Y, lambda, H, type)
+#' with(res,GCV_crit(resids,hat_values))
+#' with(res,GCV_crit(resids,hat_values,custfun = function(r,h) sum(r^2)))
+#'     
+#' GCV(lambda,Z,Y,H,type,custfun = function(r,h) sum(r^2))
+
+GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, ...){
+  # Generalized cross-validation
+  ncv = 6
+  if(!is.null(custfun)) ncv = 7
+  vrs = match.arg(vrs, c("C", "R"))
+  # If IRLS did not converge, GCV is set to Inf
+  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs, ...)
+  if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
+    GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
+                           custfun=custfun)
+  }
+  return(GCV.scores)
+}
+
+#' Cross-Validation for location estimation
+#'
+#' Provides the cross-validation indices from \link{GCV_crit} in
+#' conjunction with the \link{IRLS} function and \link{ridge} function directly 
+#' as an argument of the parameter \code{lambda}. Applicable for location
+#' estimation and function \link{ts_location}.
+#'
+#' @param lambda A candidate parameter value; non-negative real number.
+#'
+#' @param Z Data matrix of dimension \code{n}-times-\code{p}, where \code{n} is
+#' the number of observations, \code{p} is the dimension.
+#'
+#' @param Y Vector of responses of length \code{n}.
+#'
+#' @param H Penalty matrix of size \code{p}-times-\code{p} that
+#' is used inside the quadratic term for penalizing estimated parameters.
+#' 
+#' @param w Vector of length \code{n} of weights attached to the elements of 
+#' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
+#' \code{1/n} is used. 
+#'
+#' @param vrs Version of the algorhitm to be used in function \link{IRLS}; 
+#' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
+#' \code{R} version. Both should give (nearly) identical results, see 
+#' \link{IRLS} and \link{ridge}.
+#' 
+#' @param method A method for estimating the fit. Possible options are 
+#' \code{"IRLS"} for the IRLS algorithm, or \code{"ridge"} for ridge regression.
+#' Ridge is applicable only if \code{type="square"}; this method is much faster,
+#' but provides only a non-robust fit.
 #'
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, 
@@ -1417,22 +1568,38 @@ reconstruct = function(ts_prep = NULL,
 #' 
 #' # Run with the IRLS procedure
 #' res = IRLS(Z, Y, lambda, H, type)
-#' with(res,GCV_crit(resids,hat_values,weights))
-#' with(res,GCV_crit(resids,hat_values,weights,custfun = function(r,h,w) 
-#'     sum(w*r^2)))
+#' with(res,GCV_crit(resids,hat_values))
+#' with(res,GCV_crit(resids,hat_values,custfun = function(r,h) 
+#'     sum(r^2)))
 #'     
-#' GCV(lambda,Z,Y,H,type,custfun = function(r,h,w) sum(w*r^2))
+#' w = rep(1/n,n)
+#' GCV_location(lambda,Z,Y,H,type,w,custfun = function(r,h) sum(r^2))
 
-GCV <- function(lambda,Z,Y,H,type,vrs="C",custfun=NULL,...){
+GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C", 
+                         method="IRLS",
+                         custfun=NULL, ...){
+  
+  method = match.arg(method,c("IRLS", "ridge"))
+  type = match.arg(type,c("square","absolute","Huber","logistic"))
+  if(method=="ridge" & type!="square") 
+    stop("method 'ridge' available only for type 'square'.")
+  
   # Generalized cross-validation
   ncv = 6
   if(!is.null(custfun)) ncv = 7
   vrs = match.arg(vrs, c("C", "R"))
-  # If IRLS did not converge, GCV is set to Inf
-  fit.r <- IRLS(Z,Y,lambda,H,type,vrs=vrs,...)
-  if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
-    GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
+  
+  if(method=="IRLS"){
+    # If IRLS did not converge, GCV is set to Inf
+    fit.r <- IRLS(Z, Y, lambda, H, type=type, w=w, vrs=vrs, ...)
+    if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
+      GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
+    }
+  }
+  if(method=="ridge"){
+    fit.r <- ridge(Z, Y, lambda, H, w=w, vrs=vrs)
+    GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
   }
   return(GCV.scores)
 }
@@ -1576,7 +1743,7 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL,...){
 #' with(res,GCV_crit(resids,hat_values,custfun = function(r,h) 
 #'     sum((r/(1-h))^2)))
 
-GCV_crit = function(resids,hats,custfun=NULL){
+GCV_crit = function(resids, hats, custfun=NULL){
   n = length(resids)
   GCVs = rep(NA,7)
   names(GCVs) = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
@@ -1791,7 +1958,7 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C",...){
 #' res = ts_reg(X, Y, tobs, m = 2, type = type, jcv = "all", plotCV = TRUE)
 
 ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C", 
-                  plotCV=FALSE,lambda_grid=NULL,
+                  plotCV=FALSE, lambda_grid=NULL,
                   custfun=NULL,...){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
@@ -1833,12 +2000,12 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
                     custfun = custfun
   # function(resids,hats,weights)
   # robustbase::scaleTau2((resids/(1-hats))^2, c2 = 5)
-                    ,sc=sc,...))(lambda_grid)
+                    , sc=sc, ...))(lambda_grid)
   # ,sc=sc ))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
-  if(jcv==0) rownames(GCVfull) = cvnames[1:ncv]  
+  if(jcv==0) rownames(GCVfull) = cvnames[1:ncv] # if all the criteria are used 
   
   if(plotCV){
     if(jcv == 0){
@@ -1862,6 +2029,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
       abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
     }
   }
+  
   lopt = lambda_grid[apply(GCVfull,1,which.min)]
   
   if(jcv>0){
@@ -1904,6 +2072,276 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
                 theta_hat = thetahat,
                 beta_hat = betahat,
                 alpha_hat = alphahat,
+                hat_values = hatvalues,
+                weights = weights, 
+                converged = converged))
+  }
+}
+
+#' Robust thin-plate splines location estmation for functional data
+#'
+#' Provides a (potentially robust) thin-plates spline location estimator for 
+#' discretely observed functional data. The functional data do not need to be 
+#' observed on a common grid (that is, \code{NA} values in the matrix \code{Y}
+#' below are allowed). The tuning parameter \code{lambda} is selected using a 
+#' specified cross-validation criterion.
+#'
+#' @param Y Matrix of observed values of functional data \code{Y} of size 
+#'  \code{p}-times-\code{n}, one column per observation, rows corresponding to 
+#'  the positions in the rows of \code{tobs}. Functions observed on different 
+#'  grids can be provided by including missing values \code{NA} in the matrix.
+#'
+#' @param tobs Domain locations for the observed points of \code{Y}. Matrix
+#'  of size \code{p}-times-\code{d}, one row per domain point.
+#' 
+#' @param r Order of the thin-plate spline, positive integer.
+#'
+#' @param type The type of the loss function used in the minimization problem.
+#' Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|}; 
+#' \code{type="square"} for the square loss \code{rho(t)=t^2}; 
+#' \code{type="Huber"} for the Huber loss \code{rho(t)=t^2/2} if 
+#' \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
+#' \code{type="logistic"} for the logistic loss 
+#' \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.
+#' 
+#' @param jcv A numerical indicator of the cross-validation method used to 
+#' select the tuning parameter \code{lambda}. The criteria are always 
+#' based on the residuals (\code{resids}) and hat values (\code{hats}) in
+#' the fitted models. Possible values are:
+#' \itemize{
+#'  \item{"all"}{ All the criteria below are considered.}
+#'  \item{"AIC"}{ Akaike's information criterion given by 
+#'  \code{mean(resids^2)+log(n)*mean(hats)}, where \code{n} is the length of
+#'  both \code{resids} and \code{hats}.}
+#'  \item{"GCV"}{ Leave-one-out cross-validation criterion given by
+#'  \code{mean((resids^2)/((1-hats)^2))}.}
+#'  \item{"GCV(tr)"}{ Modified leave-one-out cross-validation criterion 
+#'  given by \code{mean((resids^2)/((1-mean(hats))^2))}.}
+#'  \item{"BIC"}{ Bayes information criterion given by 
+#'  \code{mean(resids^2)+2*mean(hats)}.}
+#'  \item{"rGCV"}{ A robust version of \code{GCV} where mean is replaced
+#'  by a robust M-estimator of scale of \code{resids/(1-hats)}, see 
+#'  \link[robustbase]{scaleTau2} for details.}
+#'  \item{"rGCV(tr)"}{ Modified version of a \code{rGCV} given by 
+#'  a robust M-estimator of scale of \code{resids/(1-mean(hats))}.}
+#'  \item{"custom"}{ The custom criterion given by function \code{custfun}. 
+#'  Works only if \code{custfun} is part of the input.}
+#'  }
+#'  
+#' @param vrs Version of the algorhitm to be used in function \link{ridge}; 
+#' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
+#' \code{R} version. Both should give (nearly) identical results, see 
+#' \link{IRLS}.
+#' 
+#' @param method A method for estimating the fit. Possible options are 
+#' \code{"IRLS"} for the IRLS algorithm, or \code{"ridge"} for ridge regression.
+#' Ridge is applicable only if \code{type="square"}; this method is much faster,
+#' but provides only a non-robust fit.
+#' 
+#' @param plotCV Indicator of whether a plot of the evaluated cross-validation 
+#' criteria as a function of \code{lambda} should be given.
+#' 
+#' @param lambda_grid An optional grid for select \code{lambda} from. By default
+#' this is set to be an exponential of a grid of \code{lambda_length} 
+#' equidistant values in the interval from -28 to -1.
+#' 
+#' @param lambda_length Number of elements in the grid of values \code{lambda}. 
+#' By default chosen to be 51. 
+#'
+#' @param custfun A custom function combining the residuals \code{resids} and
+#' the hat values \code{hats}. The result of the function must be numeric, see 
+#' \link{GCV_crit}.
+#' 
+#' @param ... A set of additional parameters to be passed to \link{IRLS}.
+#'
+#' @return The output differs depending whether \code{jcv="all"} or 
+#' not. If a specific cross-validation method is selected (that is, 
+#' \code{jcv} is not \code{"all"}), a list is returned:
+#'  \itemize{
+#'  \item{"lambda"}{ The selected tuning parameter \code{lambda} that minimizes
+#'  the chosen cross-validation criterion.}
+#'  \item{"fitted"}{ A vector of fitted values using the tuning 
+#'  parameter \code{lambda}. The length of this vector equals \code{m}, the 
+#'  number of non-missing values in the matrix \code{Y}. If \code{Y} does not
+#'  contain missing values, the length of this vector is \code{n*p}.}
+#'  \item{"theta_hat"}{ A numerical matrix of size \code{p}-times-\code{1} of 
+#'  estimated regression coefficients from \link{IRLS}.}
+#'  \item{"beta_hat"}{ The final location estimate \code{beta} 
+#'  evaluated at the \code{p} points from \code{tobs}, where \code{Y} was
+#'  observed. A numerical vector of length \code{p}.}
+#'  \item{"hat_values"}{ Diagonal terms of the (possibly penalized and weighted)
+#'  hat matrix of the form \code{Z*solve(t(Z)*W*Z+n*lambda*H)*t(Z)*W}, 
+#'  where \code{W} is the diagonal weight matrix in the final iteration 
+#'  of \link{IRLS}. A numerical vector of length \code{m}.}
+#'  \item{"weights"}{ The vector of weights given to the observations in the 
+#'  final iteration of \link{IRLS}. A numerical vector of length \code{m}.}
+#'  \item{"converged"}{ Indicator whether the \link{IRLS} procedure succefully 
+#'  converged. Takes value 1 if IRLS converged, 0 otherwise.}
+#' }
+#' In case when \code{jcv="all"}, all these values are given for each 
+#' cross-validation method considered. For \code{lambda} and \code{converged} 
+#' provides a list of length 6 or 7 (depending on whether \code{custfun} is 
+#' specified); for \code{fitted}, \code{beta_hat},
+#' \code{hat_values}, and \code{weights} it gives a matrix with 6 or 7 
+#' columns, each corresponding to one cross-validation method. 
+#'
+#' @references
+#' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust multidimensional 
+#' location estimation from discretely sampled functional data. 
+#' \emph{Under review}.
+#'
+#' @examples
+#' d = 1                              # dimension of domain
+#' m = 50                             # number of observation points
+#' tobs = matrix(runif(m*d), ncol=d)  # location of obsevation points
+#' n = 20                             # sample size
+#' truemeanf = function(x)            # true location function 
+#'   cos(4*pi*x[1])
+#' truemean = apply(tobs,1,truemeanf) # discretized values of the true location
+#' Y = replicate(n, truemean + rnorm(m)) # a matrix of functional data, size m*n
+#' 
+#' # introduce NAs
+#' obsprob = 0.2                      # probability of a point being observed
+#' B = matrix(rbinom(n*m,1,obsprob),ncol=n)
+#' for(i in 1:m) for(j in 1:n) if(B[i,j]==0) Y[i,j] = NA
+#' 
+#' res = ts_location(Y, tobs=tobs, r=2, type="square", plotCV=TRUE)
+
+ts_location = function(Y, tobs, r, type, 
+                       jcv = "all", vrs="C", method="IRLS",
+                       plotCV=FALSE, lambda_grid=NULL,
+                       lambda_length = 51, custfun=NULL, ...){
+  
+  method = match.arg(method,c("IRLS", "ridge"))
+  type = match.arg(type,c("square","absolute","Huber","logistic"))
+  if(method=="ridge" & type!="square") 
+    stop("method 'ridge' available only for type 'square'.")
+  
+  jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
+                        "rGCV(tr)", "custom"))
+  if(jcv=="all") jcv = 0
+  if(jcv=="AIC") jcv = 1
+  if(jcv=="GCV") jcv = 2
+  if(jcv=="GCV(tr)") jcv = 3
+  if(jcv=="BIC") jcv = 4
+  if(jcv=="rGCV") jcv = 5
+  if(jcv=="rGCV(tr)") jcv = 6
+  if(jcv=="custom") jcv = 7
+  if(jcv==7 & is.null(custfun)) stop("With custom cross-validation, 
+                                    cusfun must be provided.")
+  
+  # pre-processing for thin-plate splines
+  tspr = ts_preprocess_location(Y, tobs, r)
+  # attach(tspr)
+  Y = tspr$Y; 
+  Z = tspr$Z; H = tspr$H; Q = tspr$Q; Omega = tspr$Omega; Phi = tspr$Phi;
+  w = tspr$w;
+  degs = tspr$degs; M = tspr$M; r = tspr$r; 
+  p = tspr$p; d = tspr$d; n = tspr$n;
+  
+  if(is.null(lambda_grid)){
+    # define grid for search for lambda
+    rho1 = -28  # search range minimium exp(rho1)
+    rho2 = -1   # search range maximum exp(rho2)
+    if(is.null(lambda_length)) lambda_length = 51
+    lambda_grid = exp(c(-Inf,seq(rho1,rho2,length=lambda_length-1)))
+  } else {
+    if(!is.numeric(lambda_grid)) 
+      stop("Grid for lambda values must contain numeric values.")
+    if(any(lambda_grid<0)) 
+      stop("Grid for lambda values must contain non-negative 
+           values.")
+    lambda_length = length(lambda_grid)
+  }
+  
+  GCVfull <- Vectorize(
+    function(x) GCV_location(x,
+                    Z = Z, Y = Y, H = H, type=type, w=w, vrs=vrs,
+                    method = method,
+                    custfun = custfun
+                    # function(resids,hats,weights)
+                    # robustbase::scaleTau2((resids/(1-hats))^2, c2 = 5)
+    , sc=1, ...))(lambda_grid)
+  # , sc=1))(lambda_grid)
+  ncv = nrow(GCVfull)
+  cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
+              "custom")
+  if(jcv==0) rownames(GCVfull) = cvnames[1:ncv] # if all the criteria are used 
+  
+  if(plotCV){
+    if(jcv == 0){
+      par(mfrow=c(3,2))
+      for(i in 1:ncv){
+        plot(log(GCVfull[i,])~log(lambda_grid),type="l",
+             lwd=2,
+             xlab=expression(log(lambda)),
+             ylab="CV criterion",
+             main = rownames(GCVfull)[i])
+        abline(h=log(GCVfull[i,1]),lty=2)
+        abline(v=log(lambda_grid[which.min(GCVfull[i,])]),lty=2)
+      }
+      par(mfrow=c(1,1))  
+    } else {
+      plot(log(GCVfull[jcv,])~log(lambda_grid),type="l",
+           lwd=2, xlab=expression(log(lambda)),
+           ylab="CV criterion",
+           main = cvnames[jcv])
+      abline(h=log(GCVfull[jcv,1]),lty=2)
+      abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
+    }
+  }
+  
+  lopt = lambda_grid[apply(GCVfull,1,which.min)]
+  
+  if(jcv>0){
+    lambda = lopt[jcv] # lambda parameter selected
+    #
+    if(method=="IRLS") 
+      res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1,...)
+    if(method=="ridge")
+      res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
+    res_ts = transform_theta_location(res$theta_hat,tspr)
+    if(method=="IRLS") return(list(lambda = lambda,
+                fitted = res$fitted, 
+                theta_hat = res$theta_hat,
+                beta_hat = res_ts$beta_hat, 
+                hat_values = res$hat_values,
+                weights = res$weights, 
+                converged = res$converged))
+    if(method=="ridge") return(list(lambda = lambda,
+                                    fitted = res$fitted, 
+                                    theta_hat = res$theta_hat,
+                                    beta_hat = res_ts$beta_hat, 
+                                    hat_values = res$hat_values))
+  } else {
+    n = length(Y)
+    fitted = matrix(nrow=n,ncol=ncv)
+    betahat = matrix(nrow=nrow(tobs), ncol=ncv)
+    thetahat = matrix(nrow=nrow(tobs), ncol=ncv)
+    hatvalues = matrix(nrow=n, ncol=ncv)
+    weights = matrix(nrow=n, ncol=ncv)
+    converged = rep(NA,ncv)
+    for(jcv in 1:ncv){
+      lambda = lopt[jcv] # lambda parameter selected
+      #
+      if(method=="IRLS")
+        res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1,...)
+      if(method=="ridge")
+        res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
+      res_ts = transform_theta_location(res$theta_hat,tspr)
+      fitted[,jcv] = res$fitted
+      thetahat[,jcv] = res$theta_hat
+      betahat[,jcv] = res_ts$beta_hat
+      hatvalues[,jcv] = res$hat_values
+      if(method=="IRLS"){
+        weights[,jcv] = res$weights
+        converged[jcv] = res$converged
+      }
+    }
+    return(list(lambda = lopt,
+                fitted = fitted, 
+                theta_hat = thetahat,
+                beta_hat = betahat,
                 hat_values = hatvalues,
                 weights = weights, 
                 converged = converged))
@@ -2014,7 +2452,6 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
 #' tobs = matrix(sort(runif(p)),ncol=1)
 #' 
 #' res = ts_ridge(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
-
 
 ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C", 
                   plotCV=FALSE,lambda_grid=NULL,

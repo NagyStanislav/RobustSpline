@@ -65,8 +65,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // IRLSC
-Rcpp::List IRLSC(arma::mat Z, arma::vec Y, double lambda, arma::mat H, int type, double sc, arma::vec residsin, double tuning, double toler, int imax);
-RcppExport SEXP _RobustSpline_IRLSC(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP, SEXP typeSEXP, SEXP scSEXP, SEXP residsinSEXP, SEXP tuningSEXP, SEXP tolerSEXP, SEXP imaxSEXP) {
+Rcpp::List IRLSC(arma::mat Z, arma::vec Y, double lambda, arma::mat H, int type, arma::vec W, double sc, arma::vec residsin, double tuning, double toler, int imax);
+RcppExport SEXP _RobustSpline_IRLSC(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP, SEXP typeSEXP, SEXP WSEXP, SEXP scSEXP, SEXP residsinSEXP, SEXP tuningSEXP, SEXP tolerSEXP, SEXP imaxSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -75,18 +75,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type H(HSEXP);
     Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type W(WSEXP);
     Rcpp::traits::input_parameter< double >::type sc(scSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type residsin(residsinSEXP);
     Rcpp::traits::input_parameter< double >::type tuning(tuningSEXP);
     Rcpp::traits::input_parameter< double >::type toler(tolerSEXP);
     Rcpp::traits::input_parameter< int >::type imax(imaxSEXP);
-    rcpp_result_gen = Rcpp::wrap(IRLSC(Z, Y, lambda, H, type, sc, residsin, tuning, toler, imax));
+    rcpp_result_gen = Rcpp::wrap(IRLSC(Z, Y, lambda, H, type, W, sc, residsin, tuning, toler, imax));
     return rcpp_result_gen;
 END_RCPP
 }
 // ridgeC
-Rcpp::List ridgeC(arma::mat Z, arma::vec Y, double lambda, arma::mat H);
-RcppExport SEXP _RobustSpline_ridgeC(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP) {
+Rcpp::List ridgeC(arma::mat Z, arma::vec Y, double lambda, arma::mat H, arma::vec W);
+RcppExport SEXP _RobustSpline_ridgeC(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP, SEXP WSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -94,7 +95,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
     Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type H(HSEXP);
-    rcpp_result_gen = Rcpp::wrap(ridgeC(Z, Y, lambda, H));
+    Rcpp::traits::input_parameter< arma::vec >::type W(WSEXP);
+    rcpp_result_gen = Rcpp::wrap(ridgeC(Z, Y, lambda, H, W));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -104,8 +106,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_distnAB", (DL_FUNC) &_RobustSpline_distnAB, 5},
     {"_RobustSpline_solveC", (DL_FUNC) &_RobustSpline_solveC, 2},
     {"_RobustSpline_psiwC", (DL_FUNC) &_RobustSpline_psiwC, 3},
-    {"_RobustSpline_IRLSC", (DL_FUNC) &_RobustSpline_IRLSC, 10},
-    {"_RobustSpline_ridgeC", (DL_FUNC) &_RobustSpline_ridgeC, 4},
+    {"_RobustSpline_IRLSC", (DL_FUNC) &_RobustSpline_IRLSC, 11},
+    {"_RobustSpline_ridgeC", (DL_FUNC) &_RobustSpline_ridgeC, 5},
     {NULL, NULL, 0}
 };
 
