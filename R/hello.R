@@ -652,7 +652,7 @@ eta = function(x,d,m){
                        x^{2*m-d})
 }
 
-#' Pre-processing Raw Data for Thin-Plate Multivariate Location Estimation
+#' Pre-processing raw data for thin-plate multivariate location estimation
 #'
 #' Given the discretely observed functional data as an input, pre-processes the 
 #' dataset to a form suitable for fitting thin-plate spline functional location
@@ -779,7 +779,7 @@ ts_preprocess_location = function(Y, tobs, r){
   
   M = choose(r+d-1,d)
   if(p-M<=0) stop(paste("p must be larger than",M))
-  if(2*r<=d) stop(paste("r must be larger than",ceil(d/2)))
+  if(2*r<=d) stop(paste("r must be larger than",ceiling(d/2)))
   
   # Monomials phi of order <r
   allcom = expand.grid(replicate(d, 0:(r-1), simplify=FALSE))
@@ -819,11 +819,104 @@ ts_preprocess_location = function(Y, tobs, r){
   # weights attached to observations (length m)
   w = rep(1/(w*n),w)
   
-  return(list(Y=Y, Z=Z, H=H, Q=Q, Omega=Omega, Phi=Phi, w=w, 
-              degs=degs, tobs=tobs, M=M, r=r, p=p, d=d, n=n))
+  return(list(Y=Y, Z=Z, H=H, Q=Q, 
+              Omega=Omega, Phi=Phi, w=w, 
+              degs=degs, tobs=tobs, M=M, r=r, p=p, d=d, n=n))          
 }
 
-#' Pre-processing Raw Data for Thin-Plate Spline Regression
+#' Prediction for thin-plate multivariate location estimation
+#'
+#' Given the estimated thin-plate location spline from function 
+#' \link{ts_location}, this function predicts the spline function values
+#' at new observation points.
+#'
+#' @param tobs Domain locations for the observed points from which the location 
+#' spline was estimated. Matrix of size \code{p1}-times-\code{d}, one row per 
+#' domain point.
+#' 
+#' @param tobsnew Domain locations for the new points where the location 
+#' spline is to be estimated. Matrix of size \code{p2}-times-\code{d}, one 
+#' row per domain point.
+#' 
+#' @param gamma Vector \code{gamma} determining the first batch of parameters
+#' of the thin-plate spline. Typically outcome of \code{gamma_hat} from 
+#' functions \link{ts_location} or \link{transform_theta_location}.
+#' 
+#' @param delta Vector \code{delta} determining the second batch of parameters
+#' of the thin-plate spline. Typically outcome of \code{delta_hat} from 
+#' functions \link{ts_location} or \link{transform_theta_location}.
+#' 
+#' @param r Order of the thin-plate spline, positive integer.
+#' 
+#' @return A numerical vector of thin-plate spline values of length \code{p2}, 
+#' corresponding to the rows of the matrix \code{tobsnew}.
+#'
+#' @examples
+#' d = 1   # dimension of the domain
+#' m = 10 # number of points per curve
+#' tobs = matrix(runif(m*d), ncol=d)  # location of obsevation points
+#' n = 500                            # sample size
+#' truemeanf1 = function(x)   # true location function
+#'   cos(4*pi*x[1])
+#' truemean = apply(tobs,1,truemeanf1) # discretized values of the true location
+#' Y = replicate(n, truemean + rnorm(m)) # a matrix of functional data, size m*n
+#' 
+#' # introduce NAs
+#' obsprob = 0.5 # probability of observing a point
+#' B = matrix(rbinom(n*m,1,obsprob),ncol=n)
+#' for(i in 1:m) for(j in 1:n) if(B[i,j]==0) Y[i,j] = NA
+#' 
+#' # thin-plate spline fitting
+#' res = ts_location(Y, tobs=tobs, r=2, type="square", method="ridge")
+#' 
+#' jcv = 3 # cross-validation criterion chosen
+#' 
+#' plot(rep(tobs,n), c(Y), cex=.2, pch=16, ann=FALSE)
+#' title("True/estimated location function")
+#' points(tobs, truemean, pch=16, col="orange")
+#' fullt = matrix(seq(0,1,length=101),ncol=1)
+#' lines(fullt, apply(fullt,1,truemeanf1), col="orange", lwd=2)
+#' points(tobs, res$beta_hat[,jcv], col=2, pch=16)
+#' 
+#' # prediction
+#' tobsnew = matrix(seq(0,1,length=501),ncol=1)
+#' preds = ts_predict_location(tobs, tobsnew, res$gamma_hat[,jcv], 
+#'   res$delta_hat[,jcv], r=2)
+#' lines(tobsnew, preds, col=2, lwd=2)
+#' legend("topleft",c("data","true","estimated"),
+#'        pch=16, col=c(1,"orange",2))
+
+ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
+  
+  # tobs Domain locations for the observed points of size \code{p}-times-\code{d}
+  # r Order of the thin-plate spline, positive integer.
+  
+  p = nrow(tobs)    # number of distinct observation points
+  d = ncol(tobs)    # dimension of the domain
+  
+  M = choose(r+d-1,d)
+  if(p-M<=0) stop(paste("p must be larger than",M))
+  if(2*r<=d) stop(paste("r must be larger than",ceiling(d/2)))
+  
+  # Monomials phi of order <r
+  allcom = expand.grid(replicate(d, 0:(r-1), simplify=FALSE))
+  degs = as.matrix(allcom[rowSums(allcom)<r,,drop=FALSE])
+  M = nrow(degs)
+  if(M!=choose(r+d-1,d)) stop("Error in degrees of polynomials")
+  
+  # Fast matrix of Euclidean distances
+  Em = distnAB(tobsnew, tobs, nrow(tobsnew), nrow(tobs), ncol(tobs))
+  
+  # Matrix Omega for the penalty term
+  Omega = eta(Em,d,r)
+  
+  # Matrix Phi, monomials evaluated at tobs
+  Phi = apply(degs,1,function(x) apply(t(tobsnew)^x,2,prod))
+  
+  return(Omega%*%gamma + Phi%*%delta)        
+}
+
+#' Pre-processing raw data for thin-plate spline regression
 #'
 #' Given the data generated by \link{generate} as an input, pre-processes the 
 #' dataset to a form suitable for fitting thin-plate spline regression.
@@ -930,7 +1023,7 @@ ts_preprocess = function(X, tobs, m, int_weights=TRUE,
   
   M = choose(m+d-1,d)
   if(p-M<=0) stop(paste("p must be larger than",M))
-  if(2*m<=d) stop(paste("m must be larger than",ceil(d/2)))
+  if(2*m<=d) stop(paste("m must be larger than",ceiling(d/2)))
   
   # Establishing the weights for integration in one-dimensional domain
   if(int_weights) 
@@ -1308,8 +1401,6 @@ transform_theta = function(theta,tspr){
 #' Interpretation of values as for the functions of \code{Xfull} in function
 #' \link{generate}. Can be provided directly as the output of \link{generate}.
 #' 
-#' @param ... A set of additional parameters to be passed to \link{IRLS}.
-#' 
 #' @param main Title of the displayed plot.
 #' 
 #' @return A plot with the true and the estimated function \code{beta0}, and
@@ -1352,8 +1443,7 @@ reconstruct = function(ts_prep = NULL,
                        theta=NULL, lambda=NULL,
                        Y=NULL, type=NULL,
                        p1 = 101,
-                       betafull=NULL,
-                       ...,main=NULL){
+                       betafull=NULL,main=NULL){
   tgrid = seq(0,1,length=p1)
   # plots the complete estimated function beta
   if(is.null(theta) & is.null(lambda)) 
@@ -1363,7 +1453,7 @@ reconstruct = function(ts_prep = NULL,
     if(any(is.null(ts_prep$Z),is.null(Y),is.null(ts_prep$H),is.null(type)))
       stop("Z, Y, H, and type must be provided if theta is to be estimated.")
     # estimate directly
-    res = IRLS(ts_prep$Z,Y,lambda,ts_prep$H,type,...)
+    res = IRLS(ts_prep$Z,Y,lambda,ts_prep$H,type)
     theta = transform_theta(res$theta_hat,ts_prep)
   } else res = NULL
   
@@ -1437,8 +1527,6 @@ reconstruct = function(ts_prep = NULL,
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, 
 #' see \link{GCV_crit}.
-#' 
-#' @param ... Additional parameters passed to \link{IRLS} function.
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -1481,13 +1569,13 @@ reconstruct = function(ts_prep = NULL,
 #'     
 #' GCV(lambda,Z,Y,H,type,custfun = function(r,h) sum(r^2))
 
-GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, ...){
+GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL){
   # Generalized cross-validation
   ncv = 6
   if(!is.null(custfun)) ncv = 7
   vrs = match.arg(vrs, c("C", "R"))
   # If IRLS did not converge, GCV is set to Inf
-  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs, ...)
+  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs)
   if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
@@ -1495,7 +1583,7 @@ GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, ...){
   return(GCV.scores)
 }
 
-#' Cross-Validation for location estimation
+#' Cross-validation for location estimation
 #'
 #' Provides the cross-validation indices from \link{GCV_crit} in
 #' conjunction with the \link{IRLS} function and \link{ridge} function directly 
@@ -1529,8 +1617,6 @@ GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, ...){
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, 
 #' see \link{GCV_crit}.
-#' 
-#' @param ... Additional parameters passed to \link{IRLS} function.
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -1577,7 +1663,7 @@ GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, ...){
 
 GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C", 
                          method="IRLS",
-                         custfun=NULL, ...){
+                         custfun=NULL){
   
   method = match.arg(method,c("IRLS", "ridge"))
   type = match.arg(type,c("square","absolute","Huber","logistic"))
@@ -1591,7 +1677,7 @@ GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C",
   
   if(method=="IRLS"){
     # If IRLS did not converge, GCV is set to Inf
-    fit.r <- IRLS(Z, Y, lambda, H, type=type, w=w, vrs=vrs, ...)
+    fit.r <- IRLS(Z, Y, lambda, H, type=type, w=w, vrs=vrs)
     if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
       GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
@@ -1604,7 +1690,7 @@ GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C",
   return(GCV.scores)
 }
 
-#' Cross-Validation for Ridge Regression
+#' Cross-validation for Ridge Regression
 #'
 #' Provides the cross-validation indices from \link{GCV_crit} in
 #' conjunction with the \link{ridge} function directly as an argument of the
@@ -1671,15 +1757,15 @@ GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C",
 #'     
 #' GCV_ridge(lambda,Z,Y,H,custfun = function(r,h) sum((r/(1-h))^2))
 
-GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL,...){
+GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
   # Generalized cross-validation for ridge
   vrs = match.arg(vrs, c("C", "R"))
-  fit.r <- ridge(Z,Y,lambda,H,vrs=vrs,...)
+  fit.r <- ridge(Z,Y,lambda,H,vrs=vrs)
   GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
   return(GCV.scores)
 }
 
-#' Criteria used for Cross-Validation and for tuning parameter lambda
+#' Criteria used for cross-validation and for tuning parameter lambda
 #'
 #' Several criteria commonly used for selection of the tuning parameter 
 #' \code{lambda} in functions \link{IRLS} and \link{ridge}. 
@@ -1764,7 +1850,7 @@ GCV_crit = function(resids, hats, custfun=NULL){
   }
 }
 
-#' k-fold Cross-Validation for the IRLS procedure
+#' k-fold cross-validation for the IRLS procedure
 #'
 #' Provides the k-fold version of the cross-validation procedure in
 #' conjunction with the \link{IRLS} function directly as an argument of the
@@ -1813,7 +1899,7 @@ GCV_crit = function(resids, hats, custfun=NULL){
 #' 
 #' kCV(lambda,Z,Y,H,type,k=5)
 
-kCV = function(lambda,Z,Y,H,type,k=5,vrs="C",...){
+kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
   # k-fold cross-validation
   vrs = match.arg(vrs, c("C", "R"))
   n = length(Y)
@@ -1829,7 +1915,7 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C",...){
     Ye = Y[!bi]  # Y for estimation
     Zt = Z[bi,]  # Z for testing
     Yt = Y[bi]   # Y for testing
-    fit.r <- IRLS(Ze,Ye,lambda,H,type,vrs=vrs,...)
+    fit.r <- IRLS(Ze,Ye,lambda,H,type,vrs=vrs)
     rest = Yt - Zt%*%fit.r$theta_hat # residuals for the testing part
     # if(fit.r$converged==0) rest = rep(Inf,length(Yt)) # If IRLS did not converge
     crit[ki] = median(rest^2) # robustbase::scaleTau2(rest^2, c2 = 5)
@@ -1906,8 +1992,6 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C",...){
 #' the hat values \code{hats}. The result of the function must be numeric, see 
 #' \link{GCV_crit}.
 #' 
-#' @param ... A set of additional parameters to be passed to \link{IRLS}.
-#'
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
 #' \code{jcv} is not \code{"all"}), a list is returned:
@@ -1959,7 +2043,7 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C",...){
 
 ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C", 
                   plotCV=FALSE, lambda_grid=NULL,
-                  custfun=NULL,...){
+                  custfun=NULL){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
@@ -1997,11 +2081,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
   GCVfull <- Vectorize(
     function(x) GCV(x,
                     Z = Z, Y = Y, H = H, type=type, vrs=vrs,
-                    custfun = custfun
-  # function(resids,hats,weights)
-  # robustbase::scaleTau2((resids/(1-hats))^2, c2 = 5)
-                    , sc=sc, ...))(lambda_grid)
-  # ,sc=sc ))(lambda_grid)
+                    custfun = custfun))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -2035,7 +2115,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
   if(jcv>0){
     lambda = lopt[jcv] # lambda parameter selected
     #
-    res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc,...)
+    res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc)
     res_ts = transform_theta(res$theta_hat,tspr)
     return(list(lambda = lambda,
                 fitted = res$fitted, 
@@ -2057,7 +2137,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
-      res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc,...)
+      res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc)
       res_ts = transform_theta(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat
@@ -2152,8 +2232,6 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
 #' the hat values \code{hats}. The result of the function must be numeric, see 
 #' \link{GCV_crit}.
 #' 
-#' @param ... A set of additional parameters to be passed to \link{IRLS}.
-#'
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
 #' \code{jcv} is not \code{"all"}), a list is returned:
@@ -2210,7 +2288,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
 ts_location = function(Y, tobs, r, type, 
                        jcv = "all", vrs="C", method="IRLS",
                        plotCV=FALSE, lambda_grid=NULL,
-                       lambda_length = 51, custfun=NULL, ...){
+                       lambda_length = 51, custfun=NULL){
   
   method = match.arg(method,c("IRLS", "ridge"))
   type = match.arg(type,c("square","absolute","Huber","logistic"))
@@ -2258,11 +2336,7 @@ ts_location = function(Y, tobs, r, type,
     function(x) GCV_location(x,
                     Z = Z, Y = Y, H = H, type=type, w=w, vrs=vrs,
                     method = method,
-                    custfun = custfun
-                    # function(resids,hats,weights)
-                    # robustbase::scaleTau2((resids/(1-hats))^2, c2 = 5)
-    , sc=1, ...))(lambda_grid)
-  # , sc=1))(lambda_grid)
+                    custfun = custfun))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -2297,26 +2371,34 @@ ts_location = function(Y, tobs, r, type,
     lambda = lopt[jcv] # lambda parameter selected
     #
     if(method=="IRLS") 
-      res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1,...)
+      res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1)
     if(method=="ridge")
       res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
     res_ts = transform_theta_location(res$theta_hat,tspr)
-    if(method=="IRLS") return(list(lambda = lambda,
-                fitted = res$fitted, 
-                theta_hat = res$theta_hat,
-                beta_hat = res_ts$beta_hat, 
-                hat_values = res$hat_values,
-                weights = res$weights, 
-                converged = res$converged))
-    if(method=="ridge") return(list(lambda = lambda,
-                                    fitted = res$fitted, 
-                                    theta_hat = res$theta_hat,
-                                    beta_hat = res_ts$beta_hat, 
-                                    hat_values = res$hat_values))
+    if(method=="IRLS") return(
+      list(lambda = lambda,
+           fitted = res$fitted, 
+           theta_hat = res$theta_hat,
+           beta_hat = res_ts$beta_hat,
+           gamma_hat = res_ts$gamma_hat,
+           delta_hat = res_ts$delta_hat,
+           hat_values = res$hat_values,
+           weights = res$weights, 
+           converged = res$converged))
+    if(method=="ridge") return(
+      list(lambda = lambda,
+           fitted = res$fitted, 
+           theta_hat = res$theta_hat,
+           beta_hat = res_ts$beta_hat,
+           gamma_hat = res_ts$gamma_hat,
+           delta_hat = res_ts$delta_hat,
+           hat_values = res$hat_values))
   } else {
     n = length(Y)
     fitted = matrix(nrow=n,ncol=ncv)
     betahat = matrix(nrow=nrow(tobs), ncol=ncv)
+    gammahat = matrix(nrow=nrow(tobs),ncol=ncv)
+    deltahat = matrix(nrow=choose(d+r-1,d),ncol=ncv)
     thetahat = matrix(nrow=nrow(tobs), ncol=ncv)
     hatvalues = matrix(nrow=n, ncol=ncv)
     weights = matrix(nrow=n, ncol=ncv)
@@ -2325,13 +2407,15 @@ ts_location = function(Y, tobs, r, type,
       lambda = lopt[jcv] # lambda parameter selected
       #
       if(method=="IRLS")
-        res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1,...)
+        res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1)
       if(method=="ridge")
         res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
       res_ts = transform_theta_location(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat
       betahat[,jcv] = res_ts$beta_hat
+      gammahat[,jcv] = res_ts$gamma_hat
+      deltahat[,jcv] = res_ts$delta_hat
       hatvalues[,jcv] = res$hat_values
       if(method=="IRLS"){
         weights[,jcv] = res$weights
@@ -2342,6 +2426,8 @@ ts_location = function(Y, tobs, r, type,
                 fitted = fitted, 
                 theta_hat = thetahat,
                 beta_hat = betahat,
+                gamma_hat = gammahat,
+                delta_hat = deltahat,
                 hat_values = hatvalues,
                 weights = weights, 
                 converged = converged))
@@ -2405,8 +2491,6 @@ ts_location = function(Y, tobs, r, type,
 #' the hat values \code{hats}. The result of the function must be numeric, see 
 #' \link{GCV_crit}.
 #' 
-#' @param ... A set of additional parameters to be passed to \link{ridge}.
-#'
 #' @details Function gives a faster (non-iterative) version of the solution
 #' of \link{ts_reg} when \code{type="square"} is used. This corresponds to 
 #' the ridge version of an estimator.
@@ -2455,7 +2539,7 @@ ts_location = function(Y, tobs, r, type,
 
 ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C", 
                   plotCV=FALSE,lambda_grid=NULL,
-                  custfun=NULL,...){
+                  custfun=NULL){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -2492,10 +2576,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
   GCVfull <- Vectorize(
     function(x) GCV_ridge(x,
                     Z = Z, Y = Y, H = H, vrs=vrs,
-                    custfun = custfun
-  # function(resids,hats,weights) robustbase::scaleTau2((resids/(1-hats))^2, c2 = 5)
-                    ,...))(lambda_grid)
-  # ))(lambda_grid)
+                    custfun = custfun))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -2528,7 +2609,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
   if(jcv>0){
     lambda = lopt[jcv] # lambda parameter selected
     #
-    res = ridge(Z,Y,lambda,H,vrs=vrs,...)
+    res = ridge(Z,Y,lambda,H,vrs=vrs)
     res_ts = transform_theta(res$theta_hat,tspr)
     return(list(lambda = lambda,
                 fitted = res$fitted, 
@@ -2546,7 +2627,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
-      res = ridge(Z,Y,lambda,H,vrs=vrs,...)
+      res = ridge(Z,Y,lambda,H,vrs=vrs)
       res_ts = transform_theta(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat
@@ -2563,7 +2644,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
   }
 }
 
-#' Interpolating Functional Data Using Thin-Plate Splines
+#' Interpolating functional data using thin-plate splines
 #'
 #' Given a discretely (and possibly) irregularly observed sample of functional
 #' data, this function performs thin-plate spline interpolation of each 
@@ -2664,7 +2745,7 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
     
     M = choose(r+d-1,d)
     if(p-M<=0) stop(paste("p must be larger than",M))
-    if(2*r<=d) stop(paste("r must be larger than",ceil(d/2)))
+    if(2*r<=d) stop(paste("r must be larger than",ceiling(d/2)))
     
     # Monomials phi of order <r
     allcom = expand.grid(replicate(d, 0:(r-1), simplify=FALSE))

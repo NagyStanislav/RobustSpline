@@ -21,7 +21,15 @@ IRLSC <- function(Z, Y, lambda, H, type, W, sc, residsin, tuning, toler, imax) {
     .Call(`_RobustSpline_IRLSC`, Z, Y, lambda, H, type, W, sc, residsin, tuning, toler, imax)
 }
 
+IRLSCmult <- function(Z, Y, lambda, H, type, W, sc, tuning, toler, imax) {
+    .Call(`_RobustSpline_IRLSCmult`, Z, Y, lambda, H, type, W, sc, tuning, toler, imax)
+}
+
 ridgeC <- function(Z, Y, lambda, H, W) {
     .Call(`_RobustSpline_ridgeC`, Z, Y, lambda, H, W)
+}
+
+huber_qp_gurobi_penalized <- function(X, y, H, delta = 1.345) {
+    .Call(`_RobustSpline_huber_qp_gurobi_penalized`, X, y, H, delta)
 }
 

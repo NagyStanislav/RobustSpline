@@ -85,6 +85,26 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// IRLSCmult
+Rcpp::List IRLSCmult(arma::mat Z, arma::vec Y, arma::vec lambda, arma::mat H, int type, arma::vec W, double sc, double tuning, double toler, int imax);
+RcppExport SEXP _RobustSpline_IRLSCmult(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP, SEXP typeSEXP, SEXP WSEXP, SEXP scSEXP, SEXP tuningSEXP, SEXP tolerSEXP, SEXP imaxSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type H(HSEXP);
+    Rcpp::traits::input_parameter< int >::type type(typeSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type W(WSEXP);
+    Rcpp::traits::input_parameter< double >::type sc(scSEXP);
+    Rcpp::traits::input_parameter< double >::type tuning(tuningSEXP);
+    Rcpp::traits::input_parameter< double >::type toler(tolerSEXP);
+    Rcpp::traits::input_parameter< int >::type imax(imaxSEXP);
+    rcpp_result_gen = Rcpp::wrap(IRLSCmult(Z, Y, lambda, H, type, W, sc, tuning, toler, imax));
+    return rcpp_result_gen;
+END_RCPP
+}
 // ridgeC
 Rcpp::List ridgeC(arma::mat Z, arma::vec Y, double lambda, arma::mat H, arma::vec W);
 RcppExport SEXP _RobustSpline_ridgeC(SEXP ZSEXP, SEXP YSEXP, SEXP lambdaSEXP, SEXP HSEXP, SEXP WSEXP) {
@@ -100,6 +120,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// huber_qp_gurobi_penalized
+arma::vec huber_qp_gurobi_penalized(const arma::mat& X, const arma::vec& y, const arma::mat& H, double delta);
+RcppExport SEXP _RobustSpline_huber_qp_gurobi_penalized(SEXP XSEXP, SEXP ySEXP, SEXP HSEXP, SEXP deltaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H(HSEXP);
+    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
+    rcpp_result_gen = Rcpp::wrap(huber_qp_gurobi_penalized(X, y, H, delta));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_distn", (DL_FUNC) &_RobustSpline_distn, 3},
@@ -107,7 +141,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_solveC", (DL_FUNC) &_RobustSpline_solveC, 2},
     {"_RobustSpline_psiwC", (DL_FUNC) &_RobustSpline_psiwC, 3},
     {"_RobustSpline_IRLSC", (DL_FUNC) &_RobustSpline_IRLSC, 11},
+    {"_RobustSpline_IRLSCmult", (DL_FUNC) &_RobustSpline_IRLSCmult, 10},
     {"_RobustSpline_ridgeC", (DL_FUNC) &_RobustSpline_ridgeC, 5},
+    {"_RobustSpline_huber_qp_gurobi_penalized", (DL_FUNC) &_RobustSpline_huber_qp_gurobi_penalized, 4},
     {NULL, NULL, 0}
 };
 
