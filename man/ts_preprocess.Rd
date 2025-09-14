@@ -2,7 +2,7 @@
 % Please edit documentation in R/hello.R
 \name{ts_preprocess}
 \alias{ts_preprocess}
-\title{Pre-processing Raw Data for Thin-Plate Spline Regression}
+\title{Pre-processing raw data for thin-plate spline regression}
 \usage{
 ts_preprocess(X, tobs, m, int_weights = TRUE, I.method = "chull", I = NULL)
 }

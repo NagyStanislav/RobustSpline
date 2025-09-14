@@ -29,7 +29,3 @@ ridgeC <- function(Z, Y, lambda, H, W) {
     .Call(`_RobustSpline_ridgeC`, Z, Y, lambda, H, W)
 }
 
-huber_qp_gurobi_penalized <- function(X, y, H, delta = 1.345) {
-    .Call(`_RobustSpline_huber_qp_gurobi_penalized`, X, y, H, delta)
-}
-

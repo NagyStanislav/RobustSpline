@@ -2,7 +2,7 @@
 % Please edit documentation in R/hello.R
 \name{GCV_crit}
 \alias{GCV_crit}
-\title{Criteria used for Cross-Validation and for tuning parameter lambda}
+\title{Criteria used for cross-validation and for tuning parameter lambda}
 \usage{
 GCV_crit(resids, hats, custfun = NULL)
 }

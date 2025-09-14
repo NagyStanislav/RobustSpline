@@ -4,7 +4,7 @@
 \alias{GCV}
 \title{Cross-Validation for the IRLS procedure}
 \usage{
-GCV(lambda, Z, Y, H, type, vrs = "C", custfun = NULL, ...)
+GCV(lambda, Z, Y, H, type, vrs = "C", custfun = NULL)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}
@@ -25,8 +25,6 @@ either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, 
 see \link{GCV_crit}.}
-
-\item{...}{Additional parameters passed to \link{IRLS} function.}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

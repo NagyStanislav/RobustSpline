@@ -2,7 +2,7 @@
 % Please edit documentation in R/hello.R
 \name{ts_preprocess_location}
 \alias{ts_preprocess_location}
-\title{Pre-processing Raw Data for Thin-Plate Multivariate Location Estimation}
+\title{Pre-processing raw data for thin-plate multivariate location estimation}
 \usage{
 ts_preprocess_location(Y, tobs, r)
 }

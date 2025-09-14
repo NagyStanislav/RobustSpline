@@ -15,8 +15,7 @@ ts_location(
   plotCV = FALSE,
   lambda_grid = NULL,
   lambda_length = 51,
-  custfun = NULL,
-  ...
+  custfun = NULL
 )
 }
 \arguments{
@@ -85,8 +84,6 @@ By default chosen to be 51.}
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, see 
 \link{GCV_crit}.}
-
-\item{...}{A set of additional parameters to be passed to \link{IRLS}.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 

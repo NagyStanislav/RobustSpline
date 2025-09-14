@@ -2,7 +2,7 @@
 % Please edit documentation in R/hello.R
 \name{ts_interpolate}
 \alias{ts_interpolate}
-\title{Interpolating Functional Data Using Thin-Plate Splines}
+\title{Interpolating functional data using thin-plate splines}
 \usage{
 ts_interpolate(Xtobs, r, p.out = 101, I = c(0, 1), solve.method = c("C", "R"))
 }

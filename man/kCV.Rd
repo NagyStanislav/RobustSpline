@@ -2,9 +2,9 @@
 % Please edit documentation in R/hello.R
 \name{kCV}
 \alias{kCV}
-\title{k-fold Cross-Validation for the IRLS procedure}
+\title{k-fold cross-validation for the IRLS procedure}
 \usage{
-kCV(lambda, Z, Y, H, type, k = 5, vrs = "C", ...)
+kCV(lambda, Z, Y, H, type, k = 5, vrs = "C")
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}

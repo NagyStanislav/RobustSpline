@@ -2,7 +2,7 @@
 % Please edit documentation in R/hello.R
 \name{GCV_location}
 \alias{GCV_location}
-\title{Cross-Validation for location estimation}
+\title{Cross-validation for location estimation}
 \usage{
 GCV_location(
   lambda,
@@ -13,8 +13,7 @@ GCV_location(
   w,
   vrs = "C",
   method = "IRLS",
-  custfun = NULL,
-  ...
+  custfun = NULL
 )
 }
 \arguments{
@@ -45,8 +44,6 @@ but provides only a non-robust fit.}
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, 
 see \link{GCV_crit}.}
-
-\item{...}{Additional parameters passed to \link{IRLS} function.}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

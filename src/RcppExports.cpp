@@ -120,20 +120,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// huber_qp_gurobi_penalized
-arma::vec huber_qp_gurobi_penalized(const arma::mat& X, const arma::vec& y, const arma::mat& H, double delta);
-RcppExport SEXP _RobustSpline_huber_qp_gurobi_penalized(SEXP XSEXP, SEXP ySEXP, SEXP HSEXP, SEXP deltaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
-    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
-    Rcpp::traits::input_parameter< const arma::mat& >::type H(HSEXP);
-    Rcpp::traits::input_parameter< double >::type delta(deltaSEXP);
-    rcpp_result_gen = Rcpp::wrap(huber_qp_gurobi_penalized(X, y, H, delta));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_distn", (DL_FUNC) &_RobustSpline_distn, 3},
@@ -143,7 +129,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_RobustSpline_IRLSC", (DL_FUNC) &_RobustSpline_IRLSC, 11},
     {"_RobustSpline_IRLSCmult", (DL_FUNC) &_RobustSpline_IRLSCmult, 10},
     {"_RobustSpline_ridgeC", (DL_FUNC) &_RobustSpline_ridgeC, 5},
-    {"_RobustSpline_huber_qp_gurobi_penalized", (DL_FUNC) &_RobustSpline_huber_qp_gurobi_penalized, 4},
     {NULL, NULL, 0}
 };
 

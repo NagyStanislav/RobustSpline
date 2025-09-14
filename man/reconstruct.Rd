@@ -12,7 +12,6 @@ reconstruct(
   type = NULL,
   p1 = 101,
   betafull = NULL,
-  ...,
   main = NULL
 )
 }
@@ -48,8 +47,6 @@ estimator. A \code{d}-dimensional array of the values of the
 regression function \code{beta0} of size \code{p1}-times-...-times-\code{p1}.
 Interpretation of values as for the functions of \code{Xfull} in function
 \link{generate}. Can be provided directly as the output of \link{generate}.}
-
-\item{...}{A set of additional parameters to be passed to \link{IRLS}.}
 
 \item{main}{Title of the displayed plot.}
 }

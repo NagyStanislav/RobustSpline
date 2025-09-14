@@ -2,9 +2,9 @@
 % Please edit documentation in R/hello.R
 \name{GCV_ridge}
 \alias{GCV_ridge}
-\title{Cross-Validation for Ridge Regression}
+\title{Cross-validation for Ridge Regression}
 \usage{
-GCV_ridge(lambda, Z, Y, H, vrs = "C", custfun = NULL, ...)
+GCV_ridge(lambda, Z, Y, H, vrs = "C", custfun = NULL)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}

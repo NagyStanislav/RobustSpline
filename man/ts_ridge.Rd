@@ -13,8 +13,7 @@ ts_ridge(
   vrs = "C",
   plotCV = FALSE,
   lambda_grid = NULL,
-  custfun = NULL,
-  ...
+  custfun = NULL
 )
 }
 \arguments{
@@ -68,8 +67,6 @@ in the interval from -28 to -1.}
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, see 
 \link{GCV_crit}.}
-
-\item{...}{A set of additional parameters to be passed to \link{ridge}.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 
