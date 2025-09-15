@@ -1791,14 +1791,14 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
 #' on the input. The vector contains (some of) the values:
 #' \itemize{
 #'  \item{"AIC"}{ Akaike's information criterion given by 
-#'  \code{mean(resids^2)+log(n)*mean(hats)}, where \code{n} is the length of
+#'  \code{mean(resids^2)+2*mean(hats)}, where \code{n} is the length of
 #'  both \code{resids} and \code{hats}.}
 #'  \item{"GCV"}{ Leave-one-out cross-validation criterion given by
 #'  \code{mean((resids^2)/((1-hats)^2))}.}
 #'  \item{"GCV(tr)"}{ Modified leave-one-out cross-validation criterion 
 #'  given by \code{mean((resids^2)/((1-mean(hats))^2))}.}
 #'  \item{"BIC"}{ Bayes information criterion given by 
-#'  \code{mean(resids^2)+2*mean(hats)}.}
+#'  \code{mean(resids^2)+log(n)*mean(hats)}.}
 #'  \item{"rGCV"}{ A robust version of \code{GCV} where mean is replaced
 #'  by a robust M-estimator of scale of \code{resids/(1-hats)}, see 
 #'  \link[robustbase]{scaleTau2} for details.}
@@ -1835,10 +1835,10 @@ GCV_crit = function(resids, hats, custfun=NULL){
   names(GCVs) = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
                   "custom")
   GCVs[1:6] = c(
-    mean(resids^2)+log(n)*mean(hats),
+    mean(resids^2)+2*mean(hats),
     mean((resids^2)/((1-hats)^2)),
     mean((resids^2)/((1-mean(hats))^2)),
-    mean(resids^2)+2*mean(hats),
+    mean(resids^2)+log(n)*mean(hats),
     robustbase::scaleTau2(resids/(1-hats), c2 = 5),
     robustbase::scaleTau2(resids/(1-mean(hats)), c2 = 5)
   )
