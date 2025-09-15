@@ -24,14 +24,14 @@ help(package="RobustSpline")
 
 All major functions in the package are implemented both in R and in C++ for computational efficacy.
 
-- Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression with discretely sampled predictors. _Under review._
+- Ioannis Kalogridis and Stanislav Nagy. (2025). [Robust functional regression with discretely sampled predictors.](https://arxiv.org/abs/2311.13291) _Under review._
 - Ioannis Kalogridis and Stanislav Nagy. (2025). Robust multidimensional location estimation from discretely sampled functional data.
 
 ## Regression for functional predictors and scalar response
 
 Scalar-on-function regression with discretely observed functional data. Main functions are:
 
-* `IRLS` for the general *Iteratively Reweighted Least Squares* (IRLS) procedure for a (possibly penalized and robust) estimation in a linear model;
+* `IRLS` for the general *Iteratively Reweighted Least Squares* procedure for a (possibly penalized and robust) estimation in a linear model;
 * `ridge` for fast *Ridge Regression* with a given penalty matrix;
 * `ts_reg` for fitting robust thin-plate splines regression;
 * `ts_ridge` for fast fitting of non-robust thin-plate splines regression.
@@ -88,6 +88,7 @@ system.time(fit.ls <- ts_ridge(X = x[, sub.p], Y = y, tobs = tobs,
                                m=2, jcv = "all"))
 # > user  system elapsed 
 # > 0.80    0.02    0.84
+
 # robust estimator, Huber loss function
 system.time(fit.huber <- ts_reg(X = x[, sub.p], Y = y, tobs = tobs, m=2,
                                 type="Huber", jcv = "all", sc=sc))
@@ -95,11 +96,11 @@ system.time(fit.huber <- ts_reg(X = x[, sub.p], Y = y, tobs = tobs, m=2,
 # > 0.84    0.03    0.89
 ```
 
-Functions ts_reg and ts_ridge use cross-validation to find a value of the penalization parameter lambda. The criteria are always based on the residuals (`resids`) and hat values (`hats`) in the fitted models. Six different cross-validation methods (plus a custom method that can be provided to the functions) are implemented:
-1. "AIC" Akaike's information criterion given by `mean(resids^2)+log(n)*mean(hats)`, where `n` is the length of both resids and hats.
+Functions `ts_reg` and `ts_ridge` use cross-validation to find a value of the penalization parameter lambda. The criteria are always based on the residuals (`resids`) and hat values (`hats`) in the fitted models. Six different cross-validation methods (plus a custom method that can be provided to the functions) are implemented:
+1. "AIC" Akaike's information criterion given by `mean(resids^2)+2*mean(hats)`, where `n` is the length of both `resids` and `hats`.
 2. "GCV" Leave-one-out cross-validation criterion given by `mean((resids^2)/((1-hats)^2))`.
 3. "GCV(tr)" Modified leave-one-out cross-validation criterion given by `mean((resids^2)/((1-mean(hats))^2))`.
-4. "BIC" Bayes information criterion given by `mean(resids^2)+2*mean(hats)`.
+4. "BIC" Bayes information criterion given by `mean(resids^2)+log(n)*mean(hats)`.
 5. "rGCV" A robust version of GCV where mean is replaced by a robust M-estimator of scale of `resids/(1-hats)`, see [scaleTau2](https://search.r-project.org/CRAN/refmans/robustbase/html/scaleTau2.html) for details.
 6. "rGCV(tr)" Modified version of a rGCV given by a robust M-estimator of scale of `resids/(1-mean(hats))`.
 
@@ -168,7 +169,7 @@ dim(tobs) # (p-1)-times-2
 length(Y) # n
 # > 89
 ```
-Preprocessing for thin-plate regression
+Preprocessing for thin-plate regression.
 
 ```R
 m = 2
