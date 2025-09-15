@@ -36,7 +36,7 @@ Scalar-on-function regression with discretely observed functional data. Main fun
 * `ts_reg` for fitting robust thin-plate splines regression;
 * `ts_ridge` for fast fitting of non-robust thin-plate splines regression.
 
-### Thin-plate spline regression
+### Thin-plate spline regression: One-dimensional functional data
 
 Generate the scalar-on-function regression data. The functional data are observed on an irregular domain of length `p.used`.
 
@@ -129,5 +129,161 @@ The same plots with the robust fit, Huber loss function.
 
 <img width="943" height="571" alt="fit huber" src="https://github.com/user-attachments/assets/8c46b3ad-d35c-4a8e-9c59-9479b0a87aa0" />
 
+### Thin-plate spline regression: Multi-dimensional functional data
 
+A real data example: data `ozone2` from R package [fields](https://www.rdocumentation.org/packages/fields/versions/16.3/topics/ozone2). The task is to predict the ozone concentration at a given station (southern Chicago), based on a sample of `n=89` bivariate discretely observed random functions (ozone concentration in the midwestern US over the period June 3,1987 through August 31, 1987, 89 days). 
+
+Preprocessing and setting up the data.
+
+```R
+library(RobustSpline)
+library(fields)
+library(viridis)
+library(akima)
+
+data(ozone2)
+
+n = nrow(ozone2$y)       # 89 days
+p = nrow(ozone2$lon.lat) # 153 stations
+
+### Missing data imputation: simply average of the station
+y = ozone2$y
+dim(y)
+apply(y,1,function(x) sum(is.na(x)))
+y = t(apply(y,1,function(x){ x[is.na(x)] = mean(x,na.rm=TRUE);
+return(x)}))
+apply(y,1,function(x) sum(is.na(x)))
+
+### Data preprocessing
+j = 45      # response will be the ozone concentration at j-th station
+tun = 1.345 # tuning for the Huber estimator
+Y = y[,j] 
+tobs = ozone2$lon.lat[-j,]  # covariates observed at all but the j-th station
+X = y[,-j]                  # covariates: all but the j-th station
+
+dim(X)    # n-times-(p-1)
+# > 89 152
+dim(tobs) # (p-1)-times-2
+# > 152   2
+length(Y) # n
+# > 89
+```
+Preprocessing for thin-plate regression
+
+```R
+m = 2
+tspr = ts_preprocess(X,tobs,m)
+attach(tspr)
+```
+
+Huber estimator: Preliminary scale estimation with an M-scale of an undersmoothned L1 estimator.
+
+```R
+lambda0 = exp(-08)
+res_sc = IRLS(Z,Y,lambda=lambda0,H,type="absolute",imax = 2000)
+res_sc$last_check # convergence criterion
+(sc = RobStatTM::scaleM(res_sc$resids))
+```
+
+Huber estimator of the regression function.
+
+```R
+type="Huber"
+system.time({
+  res.h <- ts_reg(X=X, Y=Y, tobs=tobs, m=2, type=type, sc=sc)
+})
+
+# >  user  system elapsed 
+# > 257.41    1.73  280.93
+
+cvj = 6  # scaletau(tr) as the cross-validation criterion to use
+bhat.h = res.h$beta_hat[,cvj]
+```
+Least squares regression estimator of the regression function (square loss function, non-robust).
+
+```R
+### Least-squares estimator
+type="square"
+system.time({
+  res.ls <- ts_reg(X=X, Y=Y, tobs=tobs, m=2, type=type, sc=sc)
+})
+
+# > user  system elapsed 
+# > 1.30    0.00    1.42
+
+cvj = 3 # GCV(tr) as the cross-validation criterion to use
+bhat.ls = res.ls$beta_hat[,cvj]
+```
+Plot the resulting estimates. 
+
+a) Least squares estimator.
+
+```R
+nlevels <- 1000
+cols = terrain.colors(nlevels)
+par(oma = c(0,0,0,0), mar = c(2.5, 2.5, 0.5, 0.5), cex = 1.5)
+
+plot(ozone2$lon.lat,cex=.7,pch=16, type = "n")
+s.ls <- interp(ozone2$lon.lat[-j, 1], ozone2$lon.lat[-j, 2], bhat.ls, 
+               extrap = FALSE, xo = seq(min(ozone2$lon.lat[, 1]), 
+                                        max(ozone2$lon.lat[, 1]),
+                                        len = 400), 
+               yo= seq(min(ozone2$lon.lat[, 2]), max(ozone2$lon.lat[, 2]), 
+                       len = 400 ),linear = TRUE)
+
+.filled.contour(x=s.ls$x, y= s.ls$y, z=s.ls$z, 
+                levels = seq(pmin(min(bhat.h), min(bhat.ls)),
+                             pmax(max(bhat.h), max(bhat.ls)), length = nlevels),
+                col= cols)
+US(add = TRUE, lwd = 2)
+cityNames <- c("Chicago","Indianapolis","Milwaukee",
+               "St Louis")
+cityLonLatMat <- rbind(c(-87.6298,41.8781),
+                       c(-86.1581,39.7694),
+                       c(-87.9065,43.0389),
+                       c(-90.1994,38.6270))
+for (iCity in 1:length(cityNames))
+{
+  text(cityLonLatMat[iCity,1] + 0.15,cityLonLatMat[iCity,2],
+       cityNames[iCity],adj = 0, cex = 0.7) }
+points(ozone2$lon.lat, cex=.55, pch = 16 )
+points(ozone2$lon.lat[j, 1], ozone2$lon.lat[j, 2], cex=0.9, pch=16, 
+       col = "yellow")
+```
+
+<img width="841" height="630" alt="ls_ozone" src="https://github.com/user-attachments/assets/3e4a1f82-715b-4e83-b36e-0f3a05cfa3f5" />
+
+b) Huber estimator.
+
+```R
+plot(ozone2$lon.lat,cex=.7, pch=16, type = "n")
+s.r <- interp(ozone2$lon.lat[-j, 1], ozone2$lon.lat[-j, 2], bhat.h, 
+              extrap = FALSE, 
+              xo = seq(min(ozone2$lon.lat[, 1]), max(ozone2$lon.lat[, 1]),
+                       len = 400), linear = TRUE,
+              yo= seq(min(ozone2$lon.lat[, 2]), max(ozone2$lon.lat[, 2]), 
+                      len = 400 ))
+
+.filled.contour(x=s.r$x, y= s.r$y, z=s.r$z, 
+                levels = seq(pmin(min(bhat.h), min(bhat.ls)),
+                             pmax(max(bhat.h), max(bhat.ls)), 
+                             length = nlevels), col= cols)
+US(add = TRUE, lwd = 2)
+cityNames <- c("Chicago","Indianapolis","Milwaukee",
+               "St Louis")
+cityLonLatMat <- rbind(c(-87.6298,41.8781),
+                       c(-86.1581,39.7694),
+                       c(-87.9065,43.0389),
+                       c(-90.1994,38.6270))
+for (iCity in 1:length(cityNames))
+{
+  text(cityLonLatMat[iCity,1] + 0.15,cityLonLatMat[iCity,2],
+       cityNames[iCity],adj = 0, cex = 0.7) }
+points(ozone2$lon.lat, cex=.55, pch=16)
+# Outliers are depicted as red triangles
+points(ozone2$lon.lat[j, 1], ozone2$lon.lat[j, 2], cex=0.9, pch=16, 
+       col = "yellow")
+```
+
+<img width="845" height="630" alt="huber_ozone" src="https://github.com/user-attachments/assets/c87b5669-c733-457d-95d2-a4c5c356aa8b" />
 
