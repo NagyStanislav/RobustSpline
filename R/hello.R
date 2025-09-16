@@ -2168,7 +2168,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
     betahat = matrix(nrow=nrow(tobs), ncol=ncv)
     thetahat = matrix(nrow=nrow(tobs)+1, ncol=ncv)
     alphahat = rep(NA,ncv)
-    hatvalues = matrix(nrow=n, ncol=ncv)
+    hatvals = matrix(nrow=n, ncol=ncv)
     weights = matrix(nrow=n, ncol=ncv)
     converged = rep(NA,ncv)
     for(jcv in 1:ncv){
@@ -2180,7 +2180,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
       thetahat[,jcv] = res$theta_hat
       betahat[,jcv] = res_ts$beta_hat
       alphahat[jcv] = (res$theta_hat)[1]
-      hatvalues[,jcv] = res$hat_values
+      hatvals[,jcv] = res$hat_values
       weights[,jcv] = res$weights
       converged[jcv] = res$converged
     }
@@ -2189,7 +2189,7 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
                 theta_hat = thetahat,
                 beta_hat = betahat,
                 alpha_hat = alphahat,
-                hat_values = hatvalues,
+                hat_values = hatvals,
                 weights = weights, 
                 converged = converged))
   }
@@ -2437,7 +2437,7 @@ ts_location = function(Y, tobs, r, type,
     gammahat = matrix(nrow=nrow(tobs),ncol=ncv)
     deltahat = matrix(nrow=choose(d+r-1,d),ncol=ncv)
     thetahat = matrix(nrow=nrow(tobs), ncol=ncv)
-    hatvalues = matrix(nrow=n, ncol=ncv)
+    hatvals = matrix(nrow=n, ncol=ncv)
     weights = matrix(nrow=n, ncol=ncv)
     converged = rep(NA,ncv)
     for(jcv in 1:ncv){
@@ -2453,7 +2453,7 @@ ts_location = function(Y, tobs, r, type,
       betahat[,jcv] = res_ts$beta_hat
       gammahat[,jcv] = res_ts$gamma_hat
       deltahat[,jcv] = res_ts$delta_hat
-      hatvalues[,jcv] = res$hat_values
+      hatvals[,jcv] = res$hat_values
       if(method=="IRLS"){
         weights[,jcv] = res$weights
         converged[jcv] = res$converged
@@ -2465,7 +2465,7 @@ ts_location = function(Y, tobs, r, type,
                 beta_hat = betahat,
                 gamma_hat = gammahat,
                 delta_hat = deltahat,
-                hat_values = hatvalues,
+                hat_values = hatvals,
                 weights = weights, 
                 converged = converged))
   }
@@ -2692,7 +2692,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
     thetahat = matrix(nrow=nrow(tobs)+1, ncol=ncv)
     betahat = matrix(nrow=nrow(tobs), ncol=ncv)
     alphahat = rep(NA,ncv)
-    hatvalues = matrix(nrow=n, ncol=ncv)
+    hatvals = matrix(nrow=n, ncol=ncv)
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
@@ -2702,14 +2702,14 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
       thetahat[,jcv] = res$theta_hat
       betahat[,jcv] = res_ts$beta_hat
       alphahat[jcv] = (res$theta_hat)[1]
-      hatvalues[,jcv] = res$hat_values
+      hatvals[,jcv] = res$hat_values
     }
     return(list(lambda = lopt,
                 fitted = fitted,
                 theta_hat = thetahat,
                 beta_hat = betahat,
                 alpha_hat = alphahat,
-                hat_values = hatvalues))
+                hat_values = hatvals))
   }
 }
 
