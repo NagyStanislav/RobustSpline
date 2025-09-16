@@ -2849,3 +2849,117 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
   }
   return(list(X=res, tobs = tobs.out))
 }
+
+qr_fpca_piecewise_fine <- function(X, Y, t, tau = 0.5, K_max = 10, n_fine = 200) {
+  
+  #-------------- Piecewise constant interpolating function ----------------------
+  #-------------------------------------------------------------------------------
+  
+  piecewise_constant <- function(t_obs, x_obs) {
+    
+    # t_obs is a vector containing the discretization points
+    # x_obs is a vector containing the values to be interpolated
+    
+    function(t) {
+      sapply(t, function(tt) {
+        if(tt >= t_obs[length(t_obs)]) {
+          return(x_obs[length(x_obs)])
+        } else {
+          j <- max(which(t_obs <= tt))
+          return(x_obs[j])
+        }
+      })
+    }
+  }
+  
+  n <- nrow(X) # number of observations
+  p <- ncol(X) # number of discretization points
+  
+  # X is the n x p predictor matrix
+  # t is a vector containing the discretization points (the grid is assumed to be common)
+  # tau is the quantile to be estimated (by default 0.5 corresponding to the median)
+  # K_max is the number of candidate eigenfunctions to keep
+  # n_fine is the number of points that the random functions will be evaluated on after interpolation
+  
+  # Create piecewise constant functions for each one of the X_i
+  X_func <- lapply(1:n, function(i) piecewise_constant(t, X[i,]))
+  t_fine <- seq(min(t), max(t), length.out = n_fine) # equispaced discretization
+  
+  dt <- diff(c(t_fine, t_fine[n_fine] + (t_fine[n_fine]-t_fine[n_fine-1]))) # adjust the rightmost point
+  
+  # Evaluate curves on fine grid
+  X_fine <- t(sapply(X_func, function(f) f(t_fine)))  # n x n_fine
+  
+  # Mean function on fine grid
+  mean_fun_fine <- colMeans(X_fine)
+  
+  # Covariance matrix (kernel) on fine grid
+  C <- matrix(0, n_fine, n_fine)
+  for(i in 1:n) {
+    Xc <- X_fine[i,] - mean_fun_fine
+    C <- C + (Xc %*% t(Xc)) * outer(dt, dt)
+  }
+  C <- C / n
+  
+  # Eigen-decomposition
+  eig <- eigen(C, symmetric = TRUE)
+  lambda <- eig$values # eigenvalues in descending order
+  phi_fine_all <- eig$vectors  # all eigenfunctions
+  phi_fine_all <- phi_fine_all / sqrt(dt) # renormalize for orthonormality in L2
+  
+  
+  # Riemann sums for all FPCA scores up to K_max
+  xi_all <- matrix(0, n, K_max)
+  for(i in 1:n) {
+    for(k in 1:K_max) {
+      xi_all[i,k] <- sum((X_fine[i,] - mean_fun_fine) * phi_fine_all[,k] * dt)
+    }
+  }
+  
+  # GCV selection of number of eigenfunctions
+  
+  gcv_vals <- numeric(K_max)
+  for(m in 1:K_max) {
+    xiK <- xi_all[,1:m, drop=FALSE]
+    fit <- rq(Y ~ xiK, tau = tau) # Quantile regression with the rq function of the quantreg package
+    fitted_Y <- fitted(fit) # fitted values
+    rho <- function(r, tau) r * (tau - as.numeric(r < 0)) # check loss function
+    gcv_vals[m] <- sum(rho(Y - fitted_Y, tau)) / (n - (m + 1)) # GCV criterion, see Section 4 Kato (2012)
+  }
+  
+  best_m <- which.min(gcv_vals) # minimizer of the GCV criterion
+  
+  # Final fit using best_m
+  xiK <- xi_all[,1:best_m, drop=FALSE]
+  fit <- rq(Y ~ xiK, tau = tau)
+  beta_hat <- coef(fit)[-1] # exclude intercept
+  alpha_hat <- coef(fit)[1] # intercept
+  
+  # Functional coefficient on fine grid (linear combination of the eigenfunctions)
+  beta_fun_fine <- phi_fine_all[,1:best_m] %*% beta_hat
+  
+  # Convert to original t
+  beta_fun <- sapply(t, function(tt) beta_fun_fine[max(which(t_fine <= tt))])
+  mean_fun <- sapply(t, function(tt) mean_fun_fine[max(which(t_fine <= tt))])
+  phi <- matrix(0, nrow=length(t), ncol=best_m)
+  for(k in 1:best_m) {
+    phi[,k] <- sapply(t, function(tt) phi_fine_all[max(which(t_fine <= tt)),k])
+  }
+  
+  # Fitted scalar responses
+  fitted_Y <- alpha_hat + xiK %*% beta_hat
+  
+  return(list(
+    mean_fun = mean_fun,
+    eigenfunctions = phi,
+    eigenvalues = lambda[1:best_m],
+    scores = xiK,
+    qr_fit = fit,
+    fitted_Y = fitted_Y,
+    alpha_hat = alpha_hat,
+    beta_fun = beta_fun,
+    t = t,
+    gcv_vals = gcv_vals,
+    best_m = best_m
+  ))
+}

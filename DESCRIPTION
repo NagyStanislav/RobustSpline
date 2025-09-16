@@ -1,13 +1,13 @@
 Package: RobustSpline
 Type: Package
 Title: Thin-plate spline methodology for functional data.
-Version: 0.3.1
+Version: 0.3.3
 Date: 2025-09-16
 Author: Stanislav Nagy
 Maintainer: Stanislav Nagy <nagy@karlin.mff.cuni.cz>
 Description: Thin-plate spline methods for functional data: (i) regression for functional predictors and scalar response, and (ii) robust (multivariate) functional location estimation. The random functions are supposed to be discretely observed, but their domains are allowed to be multi-dimensional. Both robust and non-robust fits are implemented.
 License: GPL-2
-Depends: R (>= 2.10.0), deldir
+Depends: R (>= 2.10.0), deldir, quantreg
 Imports: Rcpp (>= 1.0.10)
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.3.1
