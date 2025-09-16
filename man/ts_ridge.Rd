@@ -13,7 +13,10 @@ ts_ridge(
   vrs = "C",
   plotCV = FALSE,
   lambda_grid = NULL,
-  custfun = NULL
+  custfun = NULL,
+  int_weights = TRUE,
+  I.method = "chull",
+  I = NULL
 )
 }
 \arguments{
@@ -67,6 +70,36 @@ in the interval from -28 to -1.}
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, see 
 \link{GCV_crit}.}
+
+\item{int_weights}{Indicator whether the integrals functions are to be 
+approximated only as a mean of function values (\code{int_weights=FALSE}), or
+whether they should be computed as weighted sums of function values 
+(\code{int_weights=TRUE}). In the latter case, weights are computed as
+proportional to the respective areas of the Voronoi tesselation of the domain
+\code{I} (works for dimension \code{d==1} or \code{d==2}). For dimension 
+\code{d==1}, this is equivalent to the length of intervals associated 
+to adjacent observation points. For \code{d>2}, no weighting is performed.}
+
+\item{I.method}{Applicable only if \code{int_weights==TRUE}. 
+Input method for the complete domain \code{I}
+where the Voronoi tesselation for obtaining the weights is evaluated. 
+Takes a value \code{"box"}
+for \code{I} the smallest axes-aligned box in the domain, or \code{"chull"}
+for \code{I} being a convex hull of points in the domain. By default set to 
+\code{"chull"}. In dimension \code{d=1}, the two methods \code{"box"}
+and \code{"chull"} are equivalent.}
+
+\item{I}{Applicable only if \code{int_weights==TRUE}. A set of points 
+specifying the complete domain \code{I} of the functional data.
+In general, can be a \code{q}-times-\code{d} matrix, where \code{q}
+is the number of points and \code{d} is the dimension. The matrix \code{I}
+then specifies the point from which to compute the domain \code{I}: 
+(a) If \code{method.I=="chull"}, the domain is the convex hull of \code{I}; 
+(b) If \code{method.I=="box"}, the domain is the smallest axes-aligned box
+that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
+\code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
+\code{I} can be specified also by a pair of real values \code{a<b}, 
+in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 

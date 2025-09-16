@@ -50,7 +50,6 @@ a vector of volumes (lengths or areas) of all the Voronoi
 cells.
 }
 \examples{
-d = 1       # dimension of domain
 p = 50      # number of observed points in domain
 x = runif(p) # x-coordinates of the points
 y = runif(p) # y-coordinates of the points

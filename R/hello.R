@@ -1124,7 +1124,6 @@ ts_preprocess = function(X, tobs, m, int_weights=TRUE,
 #' cells are empty), a warning is given.
 #'
 #' @examples
-#' d = 1       # dimension of domain
 #' p = 50      # number of observed points in domain
 #' x = runif(p) # x-coordinates of the points
 #' y = runif(p) # y-coordinates of the points
@@ -1207,7 +1206,13 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
     I = I[chull(I),]
     I = list(x=I[,1],y=I[,2])
     #
-    tesselation <- deldir(x[,1], x[,2])
+    tesselation = tryCatch(
+      error = function(cnd){
+        warning(paste0("vorArea failed, jittering data, ",cnd))
+        deldir(x[,1], x[,2])}, {
+        deldir(jitter(x[,1]), jitter(x[,2]))
+      })
+      # deldir(x[,1], x[,2])
     tiles <- tile.list(tesselation, clipp=I)
     # indices of points whose cells are non-empty
     inds = sapply(tiles,function(x) x$ptNum)
@@ -1992,6 +1997,36 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 #' the hat values \code{hats}. The result of the function must be numeric, see 
 #' \link{GCV_crit}.
 #' 
+#' @param int_weights Indicator whether the integrals functions are to be 
+#' approximated only as a mean of function values (\code{int_weights=FALSE}), or
+#' whether they should be computed as weighted sums of function values 
+#' (\code{int_weights=TRUE}). In the latter case, weights are computed as
+#' proportional to the respective areas of the Voronoi tesselation of the domain
+#' \code{I} (works for dimension \code{d==1} or \code{d==2}). For dimension 
+#' \code{d==1}, this is equivalent to the length of intervals associated 
+#' to adjacent observation points. For \code{d>2}, no weighting is performed.
+#' 
+#' @param I.method Applicable only if \code{int_weights==TRUE}. 
+#' Input method for the complete domain \code{I}
+#' where the Voronoi tesselation for obtaining the weights is evaluated. 
+#' Takes a value \code{"box"}
+#' for \code{I} the smallest axes-aligned box in the domain, or \code{"chull"}
+#' for \code{I} being a convex hull of points in the domain. By default set to 
+#' \code{"chull"}. In dimension \code{d=1}, the two methods \code{"box"}
+#' and \code{"chull"} are equivalent.
+#' 
+#' @param I Applicable only if \code{int_weights==TRUE}. A set of points 
+#' specifying the complete domain \code{I} of the functional data.
+#' In general, can be a \code{q}-times-\code{d} matrix, where \code{q}
+#' is the number of points and \code{d} is the dimension. The matrix \code{I}
+#' then specifies the point from which to compute the domain \code{I}: 
+#' (a) If \code{method.I=="chull"}, the domain is the convex hull of \code{I}; 
+#' (b) If \code{method.I=="box"}, the domain is the smallest axes-aligned box
+#' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
+#' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
+#' \code{I} can be specified also by a pair of real values \code{a<b}, 
+#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' 
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
 #' \code{jcv} is not \code{"all"}), a list is returned:
@@ -2043,7 +2078,8 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 
 ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C", 
                   plotCV=FALSE, lambda_grid=NULL,
-                  custfun=NULL){
+                  custfun=NULL, int_weights=TRUE, 
+                  I.method = "chull", I=NULL){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
@@ -2059,7 +2095,8 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
                                     cusfun must be provided.")
   
   # pre-processing for thin-plate splines
-  tspr = ts_preprocess(X,tobs,m)
+  tspr = ts_preprocess(X,tobs,m, int_weights=int_weights, 
+                       I.method = I.method, I = I)
   # attach(tspr)
   Z = tspr$Z; H = tspr$H; Q = tspr$Q; Omega = tspr$Omega; Phi = tspr$Phi;
   degs = tspr$degs; M = tspr$M; m = tspr$m; p = tspr$p; d = tspr$d; n = tspr$n;
@@ -2491,6 +2528,36 @@ ts_location = function(Y, tobs, r, type,
 #' the hat values \code{hats}. The result of the function must be numeric, see 
 #' \link{GCV_crit}.
 #' 
+#' @param int_weights Indicator whether the integrals functions are to be 
+#' approximated only as a mean of function values (\code{int_weights=FALSE}), or
+#' whether they should be computed as weighted sums of function values 
+#' (\code{int_weights=TRUE}). In the latter case, weights are computed as
+#' proportional to the respective areas of the Voronoi tesselation of the domain
+#' \code{I} (works for dimension \code{d==1} or \code{d==2}). For dimension 
+#' \code{d==1}, this is equivalent to the length of intervals associated 
+#' to adjacent observation points. For \code{d>2}, no weighting is performed.
+#' 
+#' @param I.method Applicable only if \code{int_weights==TRUE}. 
+#' Input method for the complete domain \code{I}
+#' where the Voronoi tesselation for obtaining the weights is evaluated. 
+#' Takes a value \code{"box"}
+#' for \code{I} the smallest axes-aligned box in the domain, or \code{"chull"}
+#' for \code{I} being a convex hull of points in the domain. By default set to 
+#' \code{"chull"}. In dimension \code{d=1}, the two methods \code{"box"}
+#' and \code{"chull"} are equivalent.
+#' 
+#' @param I Applicable only if \code{int_weights==TRUE}. A set of points 
+#' specifying the complete domain \code{I} of the functional data.
+#' In general, can be a \code{q}-times-\code{d} matrix, where \code{q}
+#' is the number of points and \code{d} is the dimension. The matrix \code{I}
+#' then specifies the point from which to compute the domain \code{I}: 
+#' (a) If \code{method.I=="chull"}, the domain is the convex hull of \code{I}; 
+#' (b) If \code{method.I=="box"}, the domain is the smallest axes-aligned box
+#' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
+#' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
+#' \code{I} can be specified also by a pair of real values \code{a<b}, 
+#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' 
 #' @details Function gives a faster (non-iterative) version of the solution
 #' of \link{ts_reg} when \code{type="square"} is used. This corresponds to 
 #' the ridge version of an estimator.
@@ -2538,8 +2605,9 @@ ts_location = function(Y, tobs, r, type,
 #' res = ts_ridge(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
 
 ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C", 
-                  plotCV=FALSE,lambda_grid=NULL,
-                  custfun=NULL){
+                  plotCV=FALSE, lambda_grid=NULL,
+                  custfun=NULL, int_weights=TRUE, 
+                  I.method = "chull", I=NULL){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -2554,7 +2622,8 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
                                     cusfun must be provided.")
   
   # pre-processing for thin-plate splines
-  tspr = ts_preprocess(X,tobs,m)
+  tspr = ts_preprocess(X,tobs,m, int_weights=int_weights, 
+                       I.method = I.method, I = I)
   # attach(tspr)
   Z = tspr$Z; H = tspr$H; Q = tspr$Q; Omega = tspr$Omega; Phi = tspr$Phi;
   degs = tspr$degs; M = tspr$M; m = tspr$m; p = tspr$p; d = tspr$d; n = tspr$n;
