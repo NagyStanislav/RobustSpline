@@ -86,8 +86,7 @@ arma::vec psiwC (arma::vec t, int type, double tuning){
 
 // [[Rcpp::export()]]
 Rcpp::List IRLSC (arma::mat Z, arma::vec Y, double lambda, arma::mat H,
-  int type, arma::vec W, double sc, arma::vec residsin, double tuning, double toler, 
-  int imax){
+  int type, arma::vec W, double sc, arma::vec residsin, double tuning, double toler, int imax){
   
   int ic = 0, istop = 0;
   int n = Y.n_elem, p1 = Z.n_cols;
@@ -107,7 +106,7 @@ Rcpp::List IRLSC (arma::mat Z, arma::vec Y, double lambda, arma::mat H,
     Z1 = ZW*Z + lambda*H;
     theta_new = solve(Z1, ZW*Y); // need to solve the numerical inverse issue
     resids1 = Y - Z*theta_new;
-    check = max(abs(resids1-residsin)); 
+    check = max(abs(resids1-residsin))/sc; 
     if(check < toler){
       istop = 1;
     }
@@ -153,7 +152,7 @@ Rcpp::List IRLSCmult (arma::mat Z, arma::vec Y, arma::vec lambda, arma::mat H,
       Z1 = ZW*Z + lambda(k)*H;
       theta_new.col(k) = solve(Z1, ZW*Y, arma::solve_opts::fast); // need to solve the numerical inverse issue
       resids1 = Y - Z*theta_new.col(k);
-      check = max(abs(resids1-resids.col(k))); 
+      check = max(abs(resids1-resids.col(k)))/sc; 
       if(check < toler){
         istop(k) = 1;
       }

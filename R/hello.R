@@ -149,7 +149,7 @@ IRLS = function(Z, Y, lambda, H, type, w=NULL, sc = 1,
       Z1 = Z.s%*%Z + lambda*H
       theta_new = solve(Z1, Z.s%*%Y, tol=toler_solve)
       resids1 <- c(Y - Z%*%theta_new)
-      check = max(abs(resids1-resids.in)) 
+      check = max(abs(resids1-resids.in))/sc 
       if(check < toler){istop=1}
       resids.in <- resids1
     }
@@ -1532,6 +1532,9 @@ reconstruct = function(ts_prep = NULL,
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, 
 #' see \link{GCV_crit}.
+#' 
+#' @param resids.in Initialization of the vector of residuals used to launch 
+#' the IRLS algorithms. Optional.
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -1574,13 +1577,17 @@ reconstruct = function(ts_prep = NULL,
 #'     
 #' GCV(lambda,Z,Y,H,type,custfun = function(r,h) sum(r^2))
 
-GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL){
+GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, 
+                resids.in = rep(1,length(Y)),
+                toler=toler, imax=imax){
   # Generalized cross-validation
   ncv = 6
   if(!is.null(custfun)) ncv = 7
   vrs = match.arg(vrs, c("C", "R"))
   # If IRLS did not converge, GCV is set to Inf
-  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs)
+  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs, 
+                resids.in = resids.in,
+                toler=toler, imax=imax)
   if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
@@ -2027,6 +2034,9 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
 #' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
 #' 
+#' @param resids.in Initialization of the vector of residuals used to launch 
+#' the IRLS algorithms. Optional.
+#' 
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
 #' \code{jcv} is not \code{"all"}), a list is returned:
@@ -2079,7 +2089,9 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C", 
                   plotCV=FALSE, lambda_grid=NULL,
                   custfun=NULL, int_weights=TRUE, 
-                  I.method = "chull", I=NULL){
+                  I.method = "chull", I=NULL, 
+                  resids.in = rep(1,length(Y)),
+                  toler=1e-7, imax=1000){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
@@ -2118,7 +2130,9 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
   GCVfull <- Vectorize(
     function(x) GCV(x,
                     Z = Z, Y = Y, H = H, type=type, vrs=vrs,
-                    custfun = custfun))(lambda_grid)
+                    custfun = custfun, 
+                    resids.in = resids.in,
+                    toler=toler, imax=imax))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -2152,7 +2166,9 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
   if(jcv>0){
     lambda = lopt[jcv] # lambda parameter selected
     #
-    res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc)
+    res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc, 
+               resids.in = resids.in, 
+               toler=toler, imax=imax)
     res_ts = transform_theta(res$theta_hat,tspr)
     return(list(lambda = lambda,
                 fitted = res$fitted, 
@@ -2174,7 +2190,9 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
-      res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc)
+      res = IRLS(Z,Y,lambda,H,type,vrs=vrs,sc=sc, 
+                 resids.in = resids.in,
+                 toler=toler, imax=imax)
       res_ts = transform_theta(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat
@@ -2685,7 +2703,8 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
                 theta_hat = res$theta_hat,
                 beta_hat = res_ts$beta_hat, 
                 alpha_hat = (res$theta_hat)[1],
-                hat_values = res$hat_values))
+                hat_values = res$hat_values,
+                resids = res$resids))
   } else {
     n = length(Y)
     fitted = matrix(nrow=n,ncol=ncv)
@@ -2693,6 +2712,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
     betahat = matrix(nrow=nrow(tobs), ncol=ncv)
     alphahat = rep(NA,ncv)
     hatvals = matrix(nrow=n, ncol=ncv)
+    resids = matrix(nrow=n, ncol=ncv)
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
@@ -2703,13 +2723,15 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
       betahat[,jcv] = res_ts$beta_hat
       alphahat[jcv] = (res$theta_hat)[1]
       hatvals[,jcv] = res$hat_values
+      resids[,jcv] = res$resids
     }
     return(list(lambda = lopt,
                 fitted = fitted,
                 theta_hat = thetahat,
                 beta_hat = betahat,
                 alpha_hat = alphahat,
-                hat_values = hatvals))
+                hat_values = hatvals,
+                resids = resids))
   }
 }
 

@@ -18,7 +18,8 @@ ts_reg(
   custfun = NULL,
   int_weights = TRUE,
   I.method = "chull",
-  I = NULL
+  I = NULL,
+  resids.in = rep(1, length(Y))
 )
 }
 \arguments{
@@ -113,6 +114,9 @@ that contains \code{I}. If \code{I} is \code{NULL} (by default), then
 \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 \code{I} can be specified also by a pair of real values \code{a<b}, 
 in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
+
+\item{resids.in}{Initialization of the vector of residuals used to launch 
+the IRLS algorithms. Optional.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 
