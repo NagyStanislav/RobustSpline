@@ -106,7 +106,7 @@ Rcpp::List IRLSC (arma::mat Z, arma::vec Y, double lambda, arma::mat H,
     Z1 = ZW*Z + lambda*H;
     theta_new = solve(Z1, ZW*Y); // need to solve the numerical inverse issue
     resids1 = Y - Z*theta_new;
-    check = max(abs(resids1-residsin))/sc; 
+    check = max(abs(resids1-residsin)/sc); 
     if(check < toler){
       istop = 1;
     }

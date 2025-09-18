@@ -1078,7 +1078,8 @@ ts_preprocess = function(X, tobs, m, int_weights=TRUE,
   Z = cbind(1,X%*%Int_W%*%Omega%*%Q,X%*%Int_W%*%Phi)
   
   return(list(Z=Z, H=H, Q=Q, Omega=Omega, Phi=Phi, 
-              degs=degs, tobs=tobs, M=M, m=m, p=p, d=d, n=n))
+              degs=degs, tobs=tobs, M=M, m=m, p=p, d=d, n=n,
+              w=integral_weights))
 }
 
 #' Area of the cells in Voronoi tesselation
@@ -1577,7 +1578,8 @@ reconstruct = function(ts_prep = NULL,
 #'     
 #' GCV(lambda,Z,Y,H,type,custfun = function(r,h) sum(r^2))
 
-GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL, 
+GCV <- function(lambda, Z, Y, H, type, sc = 1, 
+                vrs="C", custfun=NULL, 
                 resids.in = rep(1,length(Y)),
                 toler=toler, imax=imax){
   # Generalized cross-validation
@@ -1585,14 +1587,14 @@ GCV <- function(lambda, Z, Y, H, type, vrs="C", custfun=NULL,
   if(!is.null(custfun)) ncv = 7
   vrs = match.arg(vrs, c("C", "R"))
   # If IRLS did not converge, GCV is set to Inf
-  fit.r <- IRLS(Z, Y, lambda, H, type, vrs=vrs, 
+  fit.r <- IRLS(Z, Y, lambda, H, type, sc = sc, vrs=vrs, 
                 resids.in = resids.in,
                 toler=toler, imax=imax)
-  if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
+  # if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
-  }
-  return(GCV.scores)
+  # }
+  return(c(GCV.scores, fit.r$converged, fit.r$ic))
 }
 
 #' Cross-validation for location estimation
@@ -2086,12 +2088,15 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 #' 
 #' res = ts_reg(X, Y, tobs, m = 2, type = type, jcv = "all", plotCV = TRUE)
 
-ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C", 
+ts_reg = function(X, Y, tobs, m, type, jcv = "all", 
+                  sc = 1, vrs="C", 
                   plotCV=FALSE, lambda_grid=NULL,
                   custfun=NULL, int_weights=TRUE, 
                   I.method = "chull", I=NULL, 
                   resids.in = rep(1,length(Y)),
-                  toler=1e-7, imax=1000){
+                  toler=1e-7, imax=1000,
+                  tolerGCV=toler, imaxGCV=imax,
+                  echo = FALSE){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
@@ -2129,11 +2134,20 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
     }
   GCVfull <- Vectorize(
     function(x) GCV(x,
-                    Z = Z, Y = Y, H = H, type=type, vrs=vrs,
+                    Z = Z, Y = Y, H = H, type=type, 
+                    sc = sc, 
+                    vrs=vrs,
                     custfun = custfun, 
                     resids.in = resids.in,
-                    toler=toler, imax=imax))(lambda_grid)
-  ncv = nrow(GCVfull)
+                    toler=tolerGCV, imax=imaxGCV))(lambda_grid)
+  ncv = nrow(GCVfull)-2
+  GCVconverged = GCVfull[ncv+1,]
+  GCVic = GCVfull[ncv+2,]
+  
+  if(echo) print(paste(c("Numbers of iterations in IRLS", 
+                       GCVic), collapse=", "))
+  
+  GCVfull = GCVfull[1:ncv,]
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
   if(jcv==0) rownames(GCVfull) = cvnames[1:ncv] # if all the criteria are used 
@@ -2147,7 +2161,9 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
              xlab=expression(log(lambda)),
              ylab="CV criterion",
              main = rownames(GCVfull)[i])
-        abline(h=log(GCVfull[i,1]),lty=2)
+        points(log(GCVfull[i,])~log(lambda_grid),
+          cex = 1-GCVconverged, col="red", pch=16)
+        # abline(h=log(GCVfull[i,1]),lty=2)
         abline(v=log(lambda_grid[which.min(GCVfull[i,])]),lty=2)
       }
       par(mfrow=c(1,1))  
@@ -2156,7 +2172,9 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all", sc = 1, vrs="C",
          lwd=2, xlab=expression(log(lambda)),
          ylab="CV criterion",
          main = cvnames[jcv])
-      abline(h=log(GCVfull[jcv,1]),lty=2)
+      points(log(GCVfull[jcv,])~log(lambda_grid),
+             cex = 1-GCVconverged, col="red", pch=16)
+      # abline(h=log(GCVfull[jcv,1]),lty=2)
       abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
     }
   }
@@ -2406,7 +2424,7 @@ ts_location = function(Y, tobs, r, type,
              xlab=expression(log(lambda)),
              ylab="CV criterion",
              main = rownames(GCVfull)[i])
-        abline(h=log(GCVfull[i,1]),lty=2)
+        # abline(h=log(GCVfull[i,1]),lty=2)
         abline(v=log(lambda_grid[which.min(GCVfull[i,])]),lty=2)
       }
       par(mfrow=c(1,1))  
@@ -2415,7 +2433,7 @@ ts_location = function(Y, tobs, r, type,
            lwd=2, xlab=expression(log(lambda)),
            ylab="CV criterion",
            main = cvnames[jcv])
-      abline(h=log(GCVfull[jcv,1]),lty=2)
+      # abline(h=log(GCVfull[jcv,1]),lty=2)
       abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
     }
   }
@@ -2678,7 +2696,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
              xlab=expression(log(lambda)),
              ylab="CV criterion",
              main=rownames(GCVfull)[i])
-        abline(h=log(GCVfull[i,1]),lty=2)
+        # abline(h=log(GCVfull[i,1]),lty=2)
         abline(v=log(lambda_grid[which.min(GCVfull[i,])]),lty=2)
       }
       par(mfrow=c(1,1))  
@@ -2687,7 +2705,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
            lwd=2, xlab=expression(log(lambda)),
            ylab="CV criterion",
            main = cvnames[jcv])
-      abline(h=log(GCVfull[jcv,1]),lty=2)
+      # abline(h=log(GCVfull[jcv,1]),lty=2)
       abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
     }
   }
@@ -2874,9 +2892,8 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
 
 qr_fpca_piecewise_fine <- function(X, Y, t, tau = 0.5, K_max = 10, n_fine = 200) {
   
-  #-------------- Piecewise constant interpolating function ----------------------
-  #-------------------------------------------------------------------------------
-  
+  # Piecewise constant interpolating function 
+
   piecewise_constant <- function(t_obs, x_obs) {
     
     # t_obs is a vector containing the discretization points
