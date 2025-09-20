@@ -252,7 +252,7 @@ points(ozone2$lon.lat[j, 1], ozone2$lon.lat[j, 2], cex=0.9, pch=16,
        col = "yellow")
 ```
 
-<img width="841" height="630" alt="ls_ozone" src="https://github.com/user-attachments/assets/3e4a1f82-715b-4e83-b36e-0f3a05cfa3f5" />
+<img width="1086" height="931" alt="LS1_new" src="https://github.com/user-attachments/assets/f9b413d7-7609-4e40-83b1-8a450c511314" />
 
 b) Huber estimator.
 
@@ -286,5 +286,7 @@ points(ozone2$lon.lat[j, 1], ozone2$lon.lat[j, 2], cex=0.9, pch=16,
        col = "yellow")
 ```
 
-<img width="845" height="630" alt="huber_ozone" src="https://github.com/user-attachments/assets/c87b5669-c733-457d-95d2-a4c5c356aa8b" />
+<img width="1086" height="931" alt="H1_new0" src="https://github.com/user-attachments/assets/97dc63f3-7a00-4713-9032-30b878b40fd4" />
+
+
 
