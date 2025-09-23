@@ -10,9 +10,12 @@ GCV(
   Y,
   H,
   type,
+  sc = 1,
   vrs = "C",
   custfun = NULL,
-  resids.in = rep(1, length(Y))
+  resids.in = rep(1, length(Y)),
+  toler = toler,
+  imax = imax
 )
 }
 \arguments{
@@ -26,6 +29,17 @@ the number of observations, \code{p} is the dimension.}
 \item{H}{Penalty matrix of size \code{p}-times-\code{p} that
 is used inside the quadratic term for penalizing estimated parameters.}
 
+\item{type}{The type of the loss function used in the minimization problem.
+Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|}; 
+\code{type="square"} for the square loss \code{rho(t)=t^2}; 
+\code{type="Huber"} for the Huber loss \code{rho(t)=t^2/2} if 
+\code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
+\code{type="logistic"} for the logistic loss 
+\code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.}
+
+\item{sc}{Scale parameter to be used in the IRLS. By default \code{sc=1}, 
+that is no scaling is performed.}
+
 \item{vrs}{Version of the algorhitm to be used in function \link{IRLS}; 
 either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 \code{R} version. Both should give (nearly) identical results, see 
@@ -37,6 +51,13 @@ see \link{GCV_crit}.}
 
 \item{resids.in}{Initialization of the vector of residuals used to launch 
 the IRLS algorithms. Optional.}
+
+\item{toler}{A small positive constant specifying the tolerance level for 
+terminating the algorithm. The prcedure stops if the maximum absolute 
+distance between the residuals in the previous iteration and the new 
+residuals drops below \code{toler}.}
+
+\item{imax}{Maximum number of allowed iterations of IRLS.}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

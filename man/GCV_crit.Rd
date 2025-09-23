@@ -11,12 +11,9 @@ GCV_crit(resids, hats, custfun = NULL)
 
 \item{hats}{A vector of hat values of length \code{n}.}
 
-\item{custfun}{A custom function combining the residuals \code{resids}, the 
-hat values \code{hats}, and possibly also the weights \code{weights}. The 
+\item{custfun}{A custom function combining the residuals \code{resids} and 
+the hat values \code{hats}. The 
 result of the function must be numeric.}
-
-\item{weights}{A vector of weights given to the observations in the IRLS 
-procedure. If not provided, all weights are taken to be equal to one.}
 }
 \value{
 A named numerical vector of values. The length of the vector depends
@@ -45,11 +42,9 @@ Several criteria commonly used for selection of the tuning parameter
 \code{lambda} in functions \link{IRLS} and \link{ridge}.
 }
 \details{
-Function \code{custfun} can have either (i) two arguments 
-corresponding to \code{resids} and \code{hats} if \code{weights} are not 
-provided, or (ii) three arguments (\code{resids}, \code{hats}, 
-\code{weights}) if \code{weights} is given. The output of the function must
-be numeric.
+Function \code{custfun} has two arguments 
+corresponding to \code{resids} and \code{hats}. The output of the function 
+must be numeric.
 }
 \examples{
 n = 50      # sample size

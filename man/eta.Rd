@@ -7,11 +7,11 @@
 eta(x, d, m)
 }
 \arguments{
+\item{x}{Vector of input values of length \code{n}.}
+
 \item{d}{Dimension of the domain, positive integer.}
 
 \item{m}{Order of the spline, positive integer.}
-
-\item{t}{Vector of input values of length \code{n}.}
 }
 \value{
 A numerical vector of values.

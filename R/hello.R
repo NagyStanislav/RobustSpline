@@ -630,7 +630,7 @@ generate = function(alpha0, beta0, n, d, p,
 #' The function \code{eta_{m,d}} involved in the definition of a 
 #' \code{d}-dimensional thin-plate spline of order \code{m}.
 #'
-#' @param t Vector of input values of length \code{n}.
+#' @param x Vector of input values of length \code{n}.
 #' 
 #' @param d Dimension of the domain, positive integer.
 #' 
@@ -1525,6 +1525,17 @@ reconstruct = function(ts_prep = NULL,
 #' @param H Penalty matrix of size \code{p}-times-\code{p} that
 #' is used inside the quadratic term for penalizing estimated parameters.
 #' 
+#' @param type The type of the loss function used in the minimization problem.
+#' Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|}; 
+#' \code{type="square"} for the square loss \code{rho(t)=t^2}; 
+#' \code{type="Huber"} for the Huber loss \code{rho(t)=t^2/2} if 
+#' \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
+#' \code{type="logistic"} for the logistic loss 
+#' \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.
+#' 
+#' @param sc Scale parameter to be used in the IRLS. By default \code{sc=1}, 
+#' that is no scaling is performed.
+#' 
 #' @param vrs Version of the algorhitm to be used in function \link{IRLS}; 
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give (nearly) identical results, see 
@@ -1536,6 +1547,13 @@ reconstruct = function(ts_prep = NULL,
 #' 
 #' @param resids.in Initialization of the vector of residuals used to launch 
 #' the IRLS algorithms. Optional.
+#' 
+#' @param toler A small positive constant specifying the tolerance level for 
+#' terminating the algorithm. The prcedure stops if the maximum absolute 
+#' distance between the residuals in the previous iteration and the new 
+#' residuals drops below \code{toler}.
+#' 
+#' @param imax Maximum number of allowed iterations of IRLS. 
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -1586,14 +1604,11 @@ GCV <- function(lambda, Z, Y, H, type, sc = 1,
   ncv = 6
   if(!is.null(custfun)) ncv = 7
   vrs = match.arg(vrs, c("C", "R"))
-  # If IRLS did not converge, GCV is set to Inf
   fit.r <- IRLS(Z, Y, lambda, H, type, sc = sc, vrs=vrs, 
                 resids.in = resids.in,
                 toler=toler, imax=imax)
-  # if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
-  # }
   return(c(GCV.scores, fit.r$converged, fit.r$ic))
 }
 
@@ -1613,6 +1628,14 @@ GCV <- function(lambda, Z, Y, H, type, sc = 1,
 #'
 #' @param H Penalty matrix of size \code{p}-times-\code{p} that
 #' is used inside the quadratic term for penalizing estimated parameters.
+#' 
+#' @param type The type of the loss function used in the minimization problem.
+#' Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|}; 
+#' \code{type="square"} for the square loss \code{rho(t)=t^2}; 
+#' \code{type="Huber"} for the Huber loss \code{rho(t)=t^2/2} if 
+#' \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
+#' \code{type="logistic"} for the logistic loss 
+#' \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.
 #' 
 #' @param w Vector of length \code{n} of weights attached to the elements of 
 #' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
@@ -1788,18 +1811,13 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
 #'
 #' @param hats A vector of hat values of length \code{n}.
 #' 
-#' @param weights A vector of weights given to the observations in the IRLS 
-#' procedure. If not provided, all weights are taken to be equal to one.
-#'
-#' @param custfun A custom function combining the residuals \code{resids}, the 
-#' hat values \code{hats}, and possibly also the weights \code{weights}. The 
+#' @param custfun A custom function combining the residuals \code{resids} and 
+#' the hat values \code{hats}. The 
 #' result of the function must be numeric.
 #'
-#' @details Function \code{custfun} can have either (i) two arguments 
-#' corresponding to \code{resids} and \code{hats} if \code{weights} are not 
-#' provided, or (ii) three arguments (\code{resids}, \code{hats}, 
-#' \code{weights}) if \code{weights} is given. The output of the function must
-#' be numeric.
+#' @details Function \code{custfun} has two arguments 
+#' corresponding to \code{resids} and \code{hats}. The output of the function 
+#' must be numeric.
 #'
 #' @return A named numerical vector of values. The length of the vector depends
 #' on the input. The vector contains (some of) the values:
@@ -2038,6 +2056,25 @@ kCV = function(lambda,Z,Y,H,type,k=5,vrs="C"){
 #' 
 #' @param resids.in Initialization of the vector of residuals used to launch 
 #' the IRLS algorithms. Optional.
+#' 
+#' @param toler A small positive constant specifying the tolerance level for 
+#' terminating the algorithm. The prcedure stops if the maximum absolute 
+#' distance between the residuals in the previous iteration and the new 
+#' residuals drops below \code{toler}.
+#' 
+#' @param imax Maximum number of allowed iterations of IRLS. 
+#'
+#' @param tolerGCV A small positive constant specifying the tolerance level for 
+#' terminating the algorithm when the cross-validation is performed. 
+#' The prcedure stops if the maximum absolute 
+#' distance between the residuals in the previous iteration and the new 
+#' residuals drops below \code{tolerGCV}.
+#' 
+#' @param imaxGCV Maximum number of allowed iterations of IRLS in 
+#' cross-validation procedures.
+#' 
+#' @param echo An indicator whether diagnostic messages should be printed. Use
+#' only when modifying the content of the function.
 #' 
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
@@ -2889,6 +2926,58 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
   }
   return(list(X=res, tobs = tobs.out))
 }
+
+#' Quantile regression based on FPCA of Kato (2012)
+#'
+#' Fits a (robust) quantile regression estimator in a scalar-on-function 
+#' regression problem with discretely observed predictors. The estimator is 
+#' based on quantile regression applied in the context of functional principal
+#' components. The tuning parameter \code{J} (the number of principal 
+#' compontents chosen) is selected using cross-validation.
+#'
+#' @param X Matrix of observed values of \code{X} of size 
+#'  \code{n}-times-{p}, one row per observation, columns corresponding to the 
+#'  positions in the rows of \code{t}.
+#'
+#' @param Y Vector of responses of length \code{n}.
+#'  
+#' @param t Domain locations for the observed points of \code{X}. A numerical
+#'  vector of length \code{p}.
+#' 
+#' @param tau Order of the quantile to be used in the estimator. By default, 
+#' \code{tau=0.5}, which corresponds to the regression median.
+#' 
+#' @param Kmax Maximum number of functional principal components to be 
+#' considered. By default, set to \code{Kmax=10}.
+#' 
+#' @param n_fine Number of equi-spaced points in the domain for the complete
+#' function. By default, set to \code{n_fine=200}.
+#'
+#' @return A list composed of
+#' \itemize{
+#'  \item{"fitted_Y"}{ A vector of \code{n} fitted values.}
+#'  \item{"alpha_hat"}{ Estimate of \code{alpha0}, a numerical value.}
+#'  \item{"beta_hat"}{ Estimate of the regression function \code{beta0} 
+#'  evaluated at the \code{p} points from \code{tobs}, where \code{X} was
+#'  observed.}
+#'  \item{"gcv_vals"}{ Observed values of the generalized cross-validation 
+#'  criteria for the selection of the dimension. A numerical vector of length
+#'  \code{Kmax}.}
+#'  \item{"best_m"}{ Selected dimension using generalized cross-validation.}
+#' }
+#'
+#' @references
+#' Kato, K. (2012). Estimation in functional linear quantile regression. 
+#' \emph{The Annals of Statistics}, 40(6), 3108-3136.
+#'
+#' @examples
+#' n = 50      # sample size
+#' p = 10      # dimension of predictors
+#' X = matrix(rnorm(n*p),ncol=p) # design matrix
+#' Y = X[,1]   # response vector
+#' tobs = sort(runif(p)) 
+#' 
+#' (res = qr_fpca_piecewise_fine(X, Y, tobs))
 
 qr_fpca_piecewise_fine <- function(X, Y, t, tau = 0.5, K_max = 10, n_fine = 200) {
   

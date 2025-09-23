@@ -19,7 +19,12 @@ ts_reg(
   int_weights = TRUE,
   I.method = "chull",
   I = NULL,
-  resids.in = rep(1, length(Y))
+  resids.in = rep(1, length(Y)),
+  toler = 1e-07,
+  imax = 1000,
+  tolerGCV = toler,
+  imaxGCV = imax,
+  echo = FALSE
 )
 }
 \arguments{
@@ -117,6 +122,25 @@ in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
 
 \item{resids.in}{Initialization of the vector of residuals used to launch 
 the IRLS algorithms. Optional.}
+
+\item{toler}{A small positive constant specifying the tolerance level for 
+terminating the algorithm. The prcedure stops if the maximum absolute 
+distance between the residuals in the previous iteration and the new 
+residuals drops below \code{toler}.}
+
+\item{imax}{Maximum number of allowed iterations of IRLS.}
+
+\item{tolerGCV}{A small positive constant specifying the tolerance level for 
+terminating the algorithm when the cross-validation is performed. 
+The prcedure stops if the maximum absolute 
+distance between the residuals in the previous iteration and the new 
+residuals drops below \code{tolerGCV}.}
+
+\item{imaxGCV}{Maximum number of allowed iterations of IRLS in 
+cross-validation procedures.}
+
+\item{echo}{An indicator whether diagnostic messages should be printed. Use
+only when modifying the content of the function.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 
