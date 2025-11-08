@@ -894,7 +894,11 @@ ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
   p = nrow(tobs)    # number of distinct observation points
   d = ncol(tobs)    # dimension of the domain
   
+  if(d!=ncol(tobsnew)) stop("Dimension mismatch in tobs and tobsnew.")
+  if(length(gamma)!=p) stop("The length of gamma does not equal nrow(tobs).")
+
   M = choose(r+d-1,d)
+  if(length(delta)!=M) stop("The length of delta does not match.")
   if(p-M<=0) stop(paste("p must be larger than",M))
   if(2*r<=d) stop(paste("r must be larger than",ceiling(d/2)))
   
@@ -1599,7 +1603,7 @@ reconstruct = function(ts_prep = NULL,
 GCV <- function(lambda, Z, Y, H, type, sc = 1, 
                 vrs="C", custfun=NULL, 
                 resids.in = rep(1,length(Y)),
-                toler=toler, imax=imax){
+                toler=1e-7, imax=1000){
   # Generalized cross-validation
   ncv = 6
   if(!is.null(custfun)) ncv = 7
@@ -1607,7 +1611,7 @@ GCV <- function(lambda, Z, Y, H, type, sc = 1,
   fit.r <- IRLS(Z, Y, lambda, H, type, sc = sc, vrs=vrs, 
                 resids.in = resids.in,
                 toler=toler, imax=imax)
-    GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
+  GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
   return(c(GCV.scores, fit.r$converged, fit.r$ic))
 }
@@ -1700,7 +1704,9 @@ GCV <- function(lambda, Z, Y, H, type, sc = 1,
 
 GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C", 
                          method="IRLS",
-                         custfun=NULL){
+                         custfun=NULL, 
+                         resids.in = rep(1,length(Y)),
+                         toler=1e-7, imax=1000){
   
   method = match.arg(method,c("IRLS", "ridge"))
   type = match.arg(type,c("square","absolute","Huber","logistic"))
@@ -1713,18 +1719,18 @@ GCV_location <- function(lambda, Z, Y, H, type, w, vrs="C",
   vrs = match.arg(vrs, c("C", "R"))
   
   if(method=="IRLS"){
-    # If IRLS did not converge, GCV is set to Inf
-    fit.r <- IRLS(Z, Y, lambda, H, type=type, w=w, vrs=vrs)
-    if(fit.r$converged==0) GCV.scores = rep(Inf,ncv) else {
-      GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
+    fit.r <- IRLS(Z, Y, lambda, H, type=type, w=w, vrs=vrs, 
+                  resids.in = resids.in,
+                  toler=toler, imax=imax)
+    GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,
                            custfun=custfun)
-    }
+    return(c(GCV.scores, fit.r$converged, fit.r$ic))
   }
   if(method=="ridge"){
     fit.r <- ridge(Z, Y, lambda, H, w=w, vrs=vrs)
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
+    return(c(GCV.scores, 1, 0))
   }
-  return(GCV.scores)
 }
 
 #' Cross-validation for Ridge Regression
@@ -1798,7 +1804,7 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
   # Generalized cross-validation for ridge
   vrs = match.arg(vrs, c("C", "R"))
   fit.r <- ridge(Z,Y,lambda,H,vrs=vrs)
-  GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
+  GCV.scores <- GCV_crit(fit.r$resids, fit.r$hat_values, custfun=custfun)
   return(GCV.scores)
 }
 
@@ -2398,7 +2404,11 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all",
 ts_location = function(Y, tobs, r, type, 
                        jcv = "all", vrs="C", method="IRLS",
                        plotCV=FALSE, lambda_grid=NULL,
-                       lambda_length = 51, custfun=NULL){
+                       lambda_length = 51, custfun=NULL,
+                       resids.in = rep(1,length(Y)),
+                       toler=1e-7, imax=1000,
+                       tolerGCV=toler, imaxGCV=imax,
+                       echo = FALSE){
   
   method = match.arg(method,c("IRLS", "ridge"))
   type = match.arg(type,c("square","absolute","Huber","logistic"))
@@ -2446,8 +2456,17 @@ ts_location = function(Y, tobs, r, type,
     function(x) GCV_location(x,
                     Z = Z, Y = Y, H = H, type=type, w=w, vrs=vrs,
                     method = method,
-                    custfun = custfun))(lambda_grid)
-  ncv = nrow(GCVfull)
+                    custfun = custfun,
+                    resids.in = resids.in,
+                    toler=tolerGCV, imax=imaxGCV))(lambda_grid)
+  ncv = nrow(GCVfull)-2
+  GCVconverged = GCVfull[ncv+1,]
+  GCVic = GCVfull[ncv+2,]
+  
+  if(echo) print(paste(c("Numbers of iterations in IRLS", 
+                         GCVic), collapse=", "))
+  
+  GCVfull = GCVfull[1:ncv,]
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
   if(jcv==0) rownames(GCVfull) = cvnames[1:ncv] # if all the criteria are used 
@@ -2461,7 +2480,8 @@ ts_location = function(Y, tobs, r, type,
              xlab=expression(log(lambda)),
              ylab="CV criterion",
              main = rownames(GCVfull)[i])
-        # abline(h=log(GCVfull[i,1]),lty=2)
+        points(log(GCVfull[i,])~log(lambda_grid),
+               cex = 1-GCVconverged, col="red", pch=16)
         abline(v=log(lambda_grid[which.min(GCVfull[i,])]),lty=2)
       }
       par(mfrow=c(1,1))  
@@ -2470,7 +2490,8 @@ ts_location = function(Y, tobs, r, type,
            lwd=2, xlab=expression(log(lambda)),
            ylab="CV criterion",
            main = cvnames[jcv])
-      # abline(h=log(GCVfull[jcv,1]),lty=2)
+      points(log(GCVfull[jcv,])~log(lambda_grid),
+             cex = 1-GCVconverged, col="red", pch=16)
       abline(v=log(lambda_grid[which.min(GCVfull[jcv,])]),lty=2)
     }
   }
@@ -2481,7 +2502,9 @@ ts_location = function(Y, tobs, r, type,
     lambda = lopt[jcv] # lambda parameter selected
     #
     if(method=="IRLS") 
-      res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1)
+      res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1, 
+                 resids.in = resids.in, 
+                 toler=toler, imax=imax)
     if(method=="ridge")
       res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
     res_ts = transform_theta_location(res$theta_hat,tspr)
@@ -2517,7 +2540,9 @@ ts_location = function(Y, tobs, r, type,
       lambda = lopt[jcv] # lambda parameter selected
       #
       if(method=="IRLS")
-        res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1)
+        res = IRLS(Z,Y,lambda,H,type=type,w=w,vrs=vrs,sc=1, 
+                   resids.in = resids.in, 
+                   toler=toler, imax=imax)
       if(method=="ridge")
         res = ridge(Z,Y,lambda,H,w=w,vrs=vrs)
       res_ts = transform_theta_location(res$theta_hat,tspr)
