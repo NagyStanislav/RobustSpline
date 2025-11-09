@@ -2358,6 +2358,8 @@ ts_reg = function(X, Y, tobs, m, type, jcv = "all",
 #'  parameter \code{lambda}. The length of this vector equals \code{m}, the 
 #'  number of non-missing values in the matrix \code{Y}. If \code{Y} does not
 #'  contain missing values, the length of this vector is \code{n*p}.}
+#'  \item{"residuals"}{ A vector or a matrix of the same structure as 
+#'  \code{fitted} with the residuals \code{Y - fitted} in each column.} 
 #'  \item{"theta_hat"}{ A numerical matrix of size \code{p}-times-\code{1} of 
 #'  estimated regression coefficients from \link{IRLS}.}
 #'  \item{"beta_hat"}{ The final location estimate \code{beta} 
@@ -2511,6 +2513,7 @@ ts_location = function(Y, tobs, r, type,
     if(method=="IRLS") return(
       list(lambda = lambda,
            fitted = res$fitted, 
+           residuals = Y-res$fitted,
            theta_hat = res$theta_hat,
            beta_hat = res_ts$beta_hat,
            gamma_hat = res_ts$gamma_hat,
@@ -2521,6 +2524,7 @@ ts_location = function(Y, tobs, r, type,
     if(method=="ridge") return(
       list(lambda = lambda,
            fitted = res$fitted, 
+           residuals = Y-res$fitted,
            theta_hat = res$theta_hat,
            beta_hat = res_ts$beta_hat,
            gamma_hat = res_ts$gamma_hat,
@@ -2558,7 +2562,8 @@ ts_location = function(Y, tobs, r, type,
       }
     }
     return(list(lambda = lopt,
-                fitted = fitted, 
+                fitted = fitted,
+                residuals = Y-fitted,
                 theta_hat = thetahat,
                 beta_hat = betahat,
                 gamma_hat = gammahat,

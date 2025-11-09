@@ -15,7 +15,13 @@ ts_location(
   plotCV = FALSE,
   lambda_grid = NULL,
   lambda_length = 51,
-  custfun = NULL
+  custfun = NULL,
+  resids.in = rep(1, length(Y)),
+  toler = 1e-07,
+  imax = 1000,
+  tolerGCV = toler,
+  imaxGCV = imax,
+  echo = FALSE
 )
 }
 \arguments{
@@ -96,6 +102,8 @@ not. If a specific cross-validation method is selected (that is,
  parameter \code{lambda}. The length of this vector equals \code{m}, the 
  number of non-missing values in the matrix \code{Y}. If \code{Y} does not
  contain missing values, the length of this vector is \code{n*p}.}
+ \item{"residuals"}{ A vector or a matrix of the same structure as 
+ \code{fitted} with the residuals \code{Y - fitted} in each column.} 
  \item{"theta_hat"}{ A numerical matrix of size \code{p}-times-\code{1} of 
  estimated regression coefficients from \link{IRLS}.}
  \item{"beta_hat"}{ The final location estimate \code{beta} 

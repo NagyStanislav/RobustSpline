@@ -13,7 +13,10 @@ GCV_location(
   w,
   vrs = "C",
   method = "IRLS",
-  custfun = NULL
+  custfun = NULL,
+  resids.in = rep(1, length(Y)),
+  toler = 1e-07,
+  imax = 1000
 )
 }
 \arguments{

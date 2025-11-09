@@ -14,8 +14,8 @@ GCV(
   vrs = "C",
   custfun = NULL,
   resids.in = rep(1, length(Y)),
-  toler = toler,
-  imax = imax
+  toler = 1e-07,
+  imax = 1000
 )
 }
 \arguments{
