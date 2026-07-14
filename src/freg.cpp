@@ -350,6 +350,12 @@ Rcpp::List HuberQpC(const arma::sp_mat& Z,
     osqp_setup(&solver, P_osqp, qvec.memptr(), A_osqp, lvec.memptr(), uvec.memptr(), n_cons, n_vars, settings);
     osqp_solve(solver);
 
+    bool converged = false;
+    if (solver && solver->info) {
+      int status = solver->info->status_val;
+      converged = (status == OSQP_SOLVED || status == OSQP_SOLVED_INACCURATE);
+    }
+
     arma::vec theta = arma::zeros<arma::vec>(p);
     if (solver && solver->solution) {
         for (int i = 0; i < p; ++i) theta(i) = solver->solution->x[i];
@@ -365,7 +371,8 @@ Rcpp::List HuberQpC(const arma::sp_mat& Z,
     return Rcpp::List::create(
         Rcpp::Named("theta_hat") = theta,
         Rcpp::Named("fitted") = fitted_vals,
-        Rcpp::Named("resids") = residuals
+        Rcpp::Named("resids") = residuals,
+	Rcpp::Named("converged") = converged
     );
 }
 
@@ -422,6 +429,12 @@ Rcpp::List QuantileQpC(const arma::sp_mat& Z,
     osqp_setup(&solver, P_osqp, qvec.memptr(), A_osqp, lvec.memptr(), uvec.memptr(), n_cons, n_vars, settings);
     osqp_solve(solver);
 
+    bool converged = false;
+    if (solver && solver->info) {
+      int status = solver->info->status_val;
+      converged = (status == OSQP_SOLVED || status == OSQP_SOLVED_INACCURATE);
+    }
+
     arma::vec theta = arma::zeros<arma::vec>(p);
     if (solver && solver->solution) {
         for (int i = 0; i < p; ++i) theta(i) = solver->solution->x[i];
@@ -436,6 +449,7 @@ Rcpp::List QuantileQpC(const arma::sp_mat& Z,
     return Rcpp::List::create(
         Rcpp::Named("theta_hat") = theta,
         Rcpp::Named("fitted") = fitted_vals,
-        Rcpp::Named("resids") = residuals
+        Rcpp::Named("resids") = residuals,
+	Rcpp::Named("converged") = converged
     );
 }

@@ -4,7 +4,7 @@
 \alias{GCV_HuberQp}
 \title{Cross-validation for Huber Regression}
 \usage{
-GCV_HuberQp(lambda, Z, Y, H, vrs = "C", custfun = NULL)
+GCV_HuberQp(lambda, Z, Y, H, vrs = "C", tuning = NULL, custfun = NULL)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}
@@ -21,6 +21,9 @@ is used inside the quadratic term for penalizing estimated parameters.}
 either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 \code{R} version. Both should give (nearly) identical results, see 
 \link{HuberQp}.}
+
+\item{tuning}{A non-negative tuning constant for the Huber loss 
+function. If left to NULL, defaults to 1.345.}
 
 \item{custfun}{A custom function combining the residuals \code{resids}, the 
 hat values \code{hats}. The result of the function must be numeric, see

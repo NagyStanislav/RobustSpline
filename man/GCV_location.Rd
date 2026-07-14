@@ -10,6 +10,7 @@ GCV_location(
   Y,
   H,
   type,
+  tuning = NULL,
   alpha = 1/2,
   w,
   vrs = "C",
@@ -40,6 +41,15 @@ Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|/2};
 \code{|t|<tuning} and \code{rho(t)=tuning*(|t|-tuning/2)} otherwise; and 
 \code{type="logistic"} for the logistic loss 
 \code{rho(t)=2*t + 4*log(1+exp(-t))-4*log(2)}.}
+
+\item{tuning}{A non-negative tuning constant for the Huber/quantile loss 
+function (that is, \code{type="absolute"} or \code{type="quantile"}). 
+For \code{tuning = 0} the standard 
+absolute loss \code{rho(t) = |t|/2} is used (or its asymmetric version for
+the quantile loss). For \code{tuning > 0}, the Huber 
+loss is used, that is \code{rho(t)} is quadratic for \code{|t|<tuning} and 
+linear for \code{|t|>=tuning}. The function is chosen so that \code{rho} 
+is always continuously differentiable.}
 
 \item{alpha}{The order of the quantile if \code{type="quantile"}. By default
 taken to be \code{alpha=1/2}, which gives the absolute loss 

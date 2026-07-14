@@ -505,6 +505,8 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
     model <- osqp(P = P, q = qvec, A = A, l = lvec, u = uvec, pars = settings)
     sol <- model$Solve()
     
+    converged <- sol$info$status_val %in% c(1, 2)
+    
     # Extract beta
     beta <- sol$x[1:p]
     
@@ -514,7 +516,8 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
     
     return(list(theta_hat = beta,
                 resids = resid,
-                fitted = fitted))
+                fitted = fitted,
+                converged = converged))
   }
   
   ### Solve using the R version (relies on the C++ oqsp routine)
@@ -529,15 +532,29 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
   W_eff <- Diagonal(x = w * weights_huber)
   
   M <- t(Z) %*% W_eff %*% Z + lambda * H
-  B <- solve(M, t(Z))   # p x m_star
-  hat_diag <- rowSums(Z * t(B)) * ( w * weights_huber)  ## Major diagonal of H matr
+  #Old methods
+  #B <- solve(M, t(Z))   # p x m_star
+  #hat_diag <- rowSums(Z * t(B)) * ( w * weights_huber)  ## Major diagonal of H matr
+  ### Stochastic method
+  hat_diag <- hutch_diag(Z, M, W_eff)
   
-  return(
-    list(theta_hat = sol$theta_hat,
-         resids = sol$resids,
-         fitted = sol$fitted,
-         hat_values = hat_diag)
-  )
+  if(sol$converged == TRUE){
+    return(
+      list(theta_hat = sol$theta_hat,
+           resids = sol$resids,
+           fitted = sol$fitted,
+           hat_values = hat_diag,
+           converged = sol$converged)
+   )
+  }else{
+    IRLS_sol <- IRLS(Z, Y, lambda, H, type="Huber", vrs = vrs, w=w, tuning = tuning)
+    return(list(theta_hat = IRLS_sol$theta_hat,
+                resids = IRLS_sol$resids,
+                fitted = IRLS_sol$fitted,
+                hat_values = IRLS_sol$hat_values,
+                converged = sol$converged) ## NB, we are passing the status of OSQP
+    )
+  }
 }
 
 #' Fast Regression with Quantile (and absolute) Penalty - Quadratic programming solution
@@ -685,6 +702,9 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
     model <- osqp(P = P, q = qvec, A = A, l = lvec, u = hvec, pars = settings)
     sol <- model$Solve()
     
+    ### Has OSQP converged?
+    converged <- sol$info$status_val %in% c(1, 2)
+    
     # Extract theta
     theta <- sol$x[1:p]
     
@@ -694,7 +714,8 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
     
     return(list(theta_hat = theta,
                 resids = resid,
-                fitted = fitted))
+                fitted = fitted,
+                converged = converged))
   }
   
   ### Solve using the R version (relies on the C++ oqsp routine)
@@ -704,15 +725,30 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
   
   # Compute Hat matrix diagonal elements
   M <- t(Z) %*% Diagonal(x = w) %*% Z + lambda * H
-  B <- solve(M, t(Z))   # p x m_star
-  hat_diag <- rowSums(Z * t(B)) * w ### Major diagonal of H matrix
+  #Old methods
+  #B <- solve(M, t(Z))   # p x m_star
+  #hat_diag <- rowSums(Z * t(B)) * w  ## Major diagonal of H matr
+  ### Stochastic method
+  W_eff = diag(w)
+  hat_diag <- hutch_diag(Z, M, W_eff)
   
-  return(
-    list(theta_hat = sol$theta_hat,
-         resids = sol$resids,
-         fitted = sol$fitted,
-         hat_values = hat_diag)
-  )
+  if(sol$converged == TRUE){
+    return(
+      list(theta_hat = sol$theta_hat,
+           resids = sol$resids,
+           fitted = sol$fitted,
+           hat_values = hat_diag,
+           converged = sol$converged)
+    )
+  }else{
+    IRLS_sol <- IRLS(Z, Y, lambda, H, type="quantile", alpha = alpha, vrs = vrs, w=w)
+    return(list(theta_hat = IRLS_sol$theta_hat,
+                resids = IRLS_sol$resids,
+                fitted = IRLS_sol$fitted,
+                hat_values = IRLS_sol$hat_values,
+                converged = sol$converged) ## NB, we are passing the status of OSQP
+    )
+  }
   
 }
 
@@ -1060,4 +1096,75 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
     if(scale) ret = ret/sum(ret) # scaling for total sum 1
     return(unname(ret))
   }
+}
+
+#' Stochastic estimation of hat values (Hutchinson's method)
+#'
+#' Estimates the diagonal elements of the hat (influence) matrix for a 
+#' linear model or smoother using Hutchinson's stochastic estimator. 
+#' This is particularly useful for computing Generalized Cross-Validation (GCV) 
+#' when the full hat matrix is too large to be explicitly formed or inverted.
+#'
+#' @param Z The design matrix of dimension $n \times p$.
+#'
+#' @param M The system matrix of dimension $p \times p$ that needs to be inverted. 
+#' Typically, in a penalized likelihood context, this corresponds to $M = (Z^T W Z + \lambda K)$, 
+#' where $\lambda$ is the smoothing parameter and $K$ is the penalty matrix.
+#'
+#' @param W The weight matrix of dimension $n \times n$. Usually a diagonal 
+#' matrix containing weights or inverse variances.
+#'
+#' @param nrep The number of Monte Carlo iterations (random vectors) used 
+#' for the stochastic estimation. Increasing \code{nrep} improves accuracy 
+#' at the cost of computation time. Default is \code{100}.
+#'
+#' @details The function uses the Hutchinson trick, which leverages the property 
+#' that for a random vector $v$ with entries sampled from a Rademacher 
+#' distribution (independent $\pm 1$ with probability 0.5), the expected 
+#' value of $v \odot (Hv)$ is the diagonal of $H$. Here, $H$ is the 
+#' implicit smoothing matrix $H = Z M^{-1} Z^T W$.
+#'
+#' @return A numerical vector of length $n$ containing the estimated 
+#' diagonal elements (hat values) of the influence matrix.
+#'
+#' @examples
+#' # Example with a simple penalized regression setup
+#' n <- 500
+#' p <- 50
+#' Z <- matrix(rnorm(n * p), n, p)
+#' W <- diag(rep(1, n))
+#' lambda <- 0.5
+#' K <- diag(rep(1, p)) # Identity penalty
+#' M <- t(Z) %*% Z + lambda * K
+#'
+#' # Estimate hat values
+#' h_hat <- hutch_diag(Z, M, W, nrep = 200)
+#'
+#' # Summary of estimated hat values
+#' summary(h_hat)
+#' 
+#' @export
+hutch_diag <- function(Z, M, W, nrep = 100) {
+  
+  n <- nrow(Z)
+  d <- rep(0, n)
+  
+  for (k in 1:nrep) {
+    # Rademacher random variables
+    v <- sample(c(-1, 1), n, replace = TRUE)
+    
+    # Solves the system M x = Z^T W v
+    rhs <- as.numeric(t(Z) %*% (W %*% v))
+    x <- solve(M, rhs)
+    
+    # Compute Sv = H v (where H is the implicit hat matrix)
+    # Note: Sv corresponds to Z %*% M^-1 %*% Z^T %*% W %*% v
+    Sv <- as.numeric(Z %*% x)
+    
+    # Accumulate the stochastic estimate
+    d <- d + v * Sv
+  }
+  
+  # Return the average over iterations
+  d / nrep
 }

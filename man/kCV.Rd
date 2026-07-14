@@ -4,7 +4,7 @@
 \alias{kCV}
 \title{k-fold cross-validation for the IRLS procedure}
 \usage{
-kCV(lambda, Z, Y, H, type, alpha = 1/2, k = 5, vrs = "C")
+kCV(lambda, Z, Y, H, type, alpha = 1/2, k = 5, vrs = "C", tuning = 1.345)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}

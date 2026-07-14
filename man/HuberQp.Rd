@@ -4,7 +4,16 @@
 \alias{HuberQp}
 \title{Fast Regression with Huber Penalty - Quadratic programming solution}
 \usage{
-HuberQp(Z, Y, lambda, H, w = NULL, vrs = "C", toler_solve = 1e-35)
+HuberQp(
+  Z,
+  Y,
+  lambda,
+  H,
+  w = NULL,
+  vrs = "C",
+  tuning = 1.345,
+  toler_solve = 1e-35
+)
 }
 \arguments{
 \item{Z}{Data matrix of dimension \code{n}-times-\code{p}, where \code{n} is
@@ -28,6 +37,8 @@ manipulating matrices. This is typically the fastest version, especially if p >>
 ii) \code{vrs="R"} calls the \code{R} version. The two versions may 
 give slightly different results due to the different tolerances used for the solution
 of the qudratic problem.}
+
+\item{tuning}{A non-negative tuning constant for the Huber loss function. Default: 1.345.}
 
 \item{toler_solve}{Unused at the moment}
 }

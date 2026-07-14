@@ -10,6 +10,7 @@ ts_location(
   r,
   type,
   alpha = 1/2,
+  tuning = NULL,
   jcv = "all",
   vrs = "C",
   method = "IRLS",
@@ -49,6 +50,10 @@ Accepted are \code{type="absolute"} for the absolute loss \code{rho(t)=|t|/2};
 \item{alpha}{The order of the quantile if \code{type="quantile"}. By default
 taken to be \code{alpha=1/2}, which gives the absolute loss 
 (\code{type="absolute"}).}
+
+\item{tuning}{A non-negative tuning constant for the Huber/quantile loss 
+function (that is,  \code{type="Huber"}, \code{type="absolute"} or \code{type="quantile"}). 
+If left to NULL is defaulted to standard values. See \link{IRLS} and \link{HuberQp} for further details.}
 
 \item{jcv}{A numerical indicator of the cross-validation method used to 
 select the tuning parameter \code{lambda}. The criteria are always 
