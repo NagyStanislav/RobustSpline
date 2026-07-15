@@ -428,7 +428,8 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
                   resids.in = rep(1,length(Y)),
                   toler=1e-7, imax=1000,
                   tolerGCV=toler, imaxGCV=imax,
-                  echo = FALSE){
+                  echo = FALSE,
+                  ){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
@@ -949,7 +950,8 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C", 
                     plotCV=FALSE, lambda_grid=NULL,
                     custfun=NULL, int_weights=TRUE, 
-                    I.method = "chull", I=NULL){
+                    I.method = "chull", I=NULL,
+                    OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -987,7 +989,8 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
   GCVfull <- Vectorize(
     function(x) GCV_HuberQp(x,
                           Z = Z, Y = Y, H = H, vrs=vrs,
-                          custfun = custfun))(lambda_grid)
+                          custfun = custfun,
+                          OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -1020,7 +1023,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
   if(jcv>0){
     lambda = lopt[jcv] # lambda parameter selected
     #
-    res = HuberQp(Z,Y,lambda,H,vrs=vrs)
+    res = HuberQp(Z,Y,lambda,H,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
     res_ts = transform_theta(res$theta_hat,tspr)
     return(list(lambda = lambda,
                 fitted = res$fitted, 
@@ -1040,7 +1043,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
-      res = HuberQp(Z,Y,lambda,H,vrs=vrs)
+      res = HuberQp(Z,Y,lambda,H,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
       res_ts = transform_theta(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat
@@ -1201,7 +1204,8 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C", 
                       plotCV=FALSE, lambda_grid=NULL,
                       custfun=NULL, int_weights=TRUE, 
-                      I.method = "chull", I=NULL){
+                      I.method = "chull", I=NULL,
+                      OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -1239,7 +1243,8 @@ ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C",
   GCVfull <- Vectorize(
     function(x) GCV_QuantileQp(x,
                             Z = Z, Y = Y, H = H, alpha=alpha, vrs=vrs,
-                            custfun = custfun))(lambda_grid)
+                            custfun = custfun,
+                            OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -1272,7 +1277,7 @@ ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C",
   if(jcv>0){
     lambda = lopt[jcv] # lambda parameter selected
     #
-    res = QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs)
+    res = QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
     res_ts = transform_theta(res$theta_hat,tspr)
     return(list(lambda = lambda,
                 fitted = res$fitted, 
@@ -1292,7 +1297,7 @@ ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C",
     for(jcv in 1:ncv){
       lambda = lopt[jcv] # lambda parameter selected
       #
-      res = QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs)
+      res = QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
       res_ts = transform_theta(res$theta_hat,tspr)
       fitted[,jcv] = res$fitted
       thetahat[,jcv] = res$theta_hat

@@ -497,7 +497,8 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
                        resids.in = rep(1,length(Y)),
                        toler=1e-7, imax=1000,
                        tolerGCV=toler, imaxGCV=imax,
-                       echo = FALSE){
+                       echo = FALSE,
+                       OSQP_res_abs=1e-6, OSQP_res_rel=1e-6){
   
   method = match.arg(method,c("IRLS", "ridge", "HuberQp", "QuantileQp"))
   type = match.arg(type,c("square","absolute","quantile","Huber","logistic"))
@@ -555,7 +556,8 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
                              method = method,
                              custfun = custfun,
                              resids.in = resids.in,
-                             toler=tolerGCV, imax=imaxGCV))(lambda_grid)
+                             toler=tolerGCV, imax=imaxGCV,
+                             OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
   ncv = nrow(GCVfull)-2
   GCVconverged = GCVfull[ncv+1,]
   GCVic = GCVfull[ncv+2,]
@@ -610,11 +612,11 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
       obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=1.345)
     }
     if(method=="HuberQp"){
-      res = HuberQp(Z,Y,lambda,H,w=w,vrs=vrs,tuning=tuning)
+      res = HuberQp(Z,Y,lambda,H,w=w,vrs=vrs,tuning=tuning,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
       obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=tuning)
     }
     if(method=="QuantileQp"){
-      res = QuantileQp(Z,Y,lambda,H,alpha = alpha,w=w,vrs=vrs)
+      res = QuantileQp(Z,Y,lambda,H,alpha = alpha,w=w,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
       obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=1.345)
     }
     res_ts = transform_theta_location(res$theta_hat,tspr)
@@ -685,11 +687,11 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
         obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=1.345)
       }
       if(method=="HuberQp"){
-        res = HuberQp(Z,Y,lambda,H,w=w,vrs=vrs,tuning=tuning)
+        res = HuberQp(Z,Y,lambda,H,w=w,vrs=vrs,tuning=tuning,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
         obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=tuning)
       }
       if(method=="QuantileQp"){
-        res = QuantileQp(Z,Y,lambda,H,alpha=alpha,w=w,vrs=vrs)
+        res = QuantileQp(Z,Y,lambda,H,alpha=alpha,w=w,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
         obj_fun_eval <- evaluate_objective(res$theta_hat, Y, Z, lambda*H,type=type,alpha=alpha,tuning=1.345)
       }
       res_ts = transform_theta_location(res$theta_hat,tspr)

@@ -415,7 +415,7 @@ ridge = function(Z, Y, lambda, H, w=NULL, vrs="C", toler_solve=1e-35){
 #' @importFrom osqp osqp osqpSettings
 #' @export
 
-HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve=1e-35){
+HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve=1e-35, OSQP_res_abs = 1e-6, OSQP_res_rel = 1e-6){
   n = length(Y)
   if(is.null(w)) w = rep(1/n,n)
   # Scale the weights i order to obtain the exact result of IRLS (the entire equation is scaled)
@@ -438,10 +438,10 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
   ### Solve the problem (C++ version)
   if(vrs=="C"){
     Z_sparse <- as(Z, "dgCMatrix")
-    sol = HuberQpC(Z_sparse, Y, 2*lambda*H, w, delta = tuning)
+    sol = HuberQpC(Z_sparse, Y, 2*lambda*H, w, delta = tuning, OSQP_res_abs, OSQP_res_rel)
   }
   
-  huber_qp_osqp_penalized <- function(X, y, H, w, delta = 1.345) {
+  huber_qp_osqp_penalized <- function(X, y, H, w, delta = 1.345, OSQP_res_abs = 1e-6, OSQP_res_abs = 1e-6) {
     # Input validation
     if (!is.matrix(X)) stop("X must be a matrix")
     if (!is.vector(y)) stop("y must be a vector")
@@ -501,7 +501,7 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
     uvec <- rep(Inf, ncons)
     
     # Solve QP using osqp (This is already a C++ routine)
-    settings <- osqpSettings(verbose = FALSE, max_iter = 10000,eps_abs = 1e-10, eps_rel = 1e-10)
+    settings <- osqpSettings(verbose = FALSE, max_iter = 4000, eps_abs = OSQP_res_abs, eps_rel = OSQP_res_rel)
     model <- osqp(P = P, q = qvec, A = A, l = lvec, u = uvec, pars = settings)
     sol <- model$Solve()
     
@@ -521,7 +521,7 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
   }
   
   ### Solve using the R version (relies on the C++ oqsp routine)
-  if(vrs=="R") {sol = huber_qp_osqp_penalized(Z, Y, 2*lambda*H, w,delta=tuning)}
+  if(vrs=="R") {sol = huber_qp_osqp_penalized(Z, Y, 2*lambda*H, w,delta=tuning, OSQP_res_abs, OSQP_res_rel)}
   
   theta = sol$theta_hat
   
@@ -638,7 +638,7 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
 #' @importFrom osqp osqp osqpSettings
 #' @export
 
-QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solve=1e-35){
+QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solve=1e-35, OSQP_res_abs = 1e-6, OSQP_res_rel = 1e-6){
   m_star = length(Y)
   if(is.null(w)) w = rep(1/m_star,m_star) # true weight
   vrs = match.arg(vrs,c("C","R"))
@@ -655,10 +655,10 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
   ### Solve the problem (C++ version)
   if(vrs=="C"){
     Z_sparse <- as(Z, "dgCMatrix")
-    sol = QuantileQpC(Z_sparse, Y, lambda, H, w, alpha)
+    sol = QuantileQpC(Z_sparse, Y, lambda, H, w, alpha, OSQP_res_abs, OSQP_res_rel)
   }
   
-  quantile_qp_osqp_penalized <- function(Z, Y, lambda, H, w, alpha) {
+  quantile_qp_osqp_penalized <- function(Z, Y, lambda, H, w, alpha, OSQP_res_abs, OSQP_res_rel) {
     # Input validation
     if (!is.matrix(Z)) stop("Z must be a matrix")
     if (!is.vector(Y)) stop("Y must be a vector")
@@ -698,7 +698,7 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
     hvec <- c(Y, rep(Inf, m_star), rep(Inf, m_star))
     
     # Solve QP using osqp (This is already a C++ routine)
-    settings <- osqpSettings(verbose = FALSE, max_iter = 4000,eps_abs = 1e-6, eps_rel = 1e-6)
+    settings <- osqpSettings(verbose = FALSE, max_iter = 4000,eps_abs = OSQP_res_abs, eps_rel = OSQP_res_rel)
     model <- osqp(P = P, q = qvec, A = A, l = lvec, u = hvec, pars = settings)
     sol <- model$Solve()
     
@@ -719,7 +719,7 @@ QuantileQp = function(Z, Y, lambda, H,  alpha = 1/2, w=NULL, vrs="C", toler_solv
   }
   
   ### Solve using the R version (relies on the C++ oqsp routine)
-  if(vrs=="R") {sol = quantile_qp_osqp_penalized(Z, Y, lambda, H, w, alpha)}
+  if(vrs=="R") {sol = quantile_qp_osqp_penalized(Z, Y, lambda, H, w, alpha, OSQP_res_abs, OSQP_res_rel)}
   
   theta = sol$theta_hat
   

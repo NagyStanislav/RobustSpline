@@ -223,7 +223,9 @@ GCV_location <- function(lambda, Z, Y, H, type, tuning = NULL, alpha=1/2, w, vrs
                          method="IRLS",
                          custfun=NULL, 
                          resids.in = rep(1,length(Y)),
-                         toler=1e-7, imax=1000){
+                         toler=1e-7, imax=1000,
+                         OSQP_res_abs=1e-6,
+                         OSQP_res_rel=1e-6){
   
   method = match.arg(method,c("IRLS", "ridge", "HuberQp", "QuantileQp"))
   type = match.arg(type,c("square","absolute", "quantile", "Huber","logistic"))
@@ -253,12 +255,12 @@ GCV_location <- function(lambda, Z, Y, H, type, tuning = NULL, alpha=1/2, w, vrs
     return(c(GCV.scores, 1, 0))
   }
   if(method=="HuberQp"){
-    fit.r <- HuberQp(Z, Y, lambda, H, w=w, vrs=vrs, tuning = tuning)
+    fit.r <- HuberQp(Z, Y, lambda, H, w=w, vrs=vrs, tuning = tuning, OSQP_res_abs=OSQP_res_abs, OSQP_res_rel=OSQP_res_rel)
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
     return(c(GCV.scores, 1, 0))
   }
   if(method=="QuantileQp"){
-    fit.r <- QuantileQp(Z, Y, lambda, H, alpha=alpha, w=w, vrs=vrs)
+    fit.r <- QuantileQp(Z, Y, lambda, H, alpha=alpha, w=w, vrs=vrs, OSQP_res_abs=OSQP_res_abs, OSQP_res_rel=OSQP_res_rel)
     GCV.scores <- GCV_crit(fit.r$resids,fit.r$hat_values,custfun=custfun)
     return(c(GCV.scores, 1, 0))
   }
@@ -411,10 +413,10 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
 #' GCV_ridge(lambda,Z,Y,H,custfun = function(r,h) sum((r/(1-h))^2))
 #' @export
 
-GCV_HuberQp <- function(lambda, Z, Y, H, vrs="C", tuning = NULL, custfun=NULL){
+GCV_HuberQp <- function(lambda, Z, Y, H, vrs="C", tuning = NULL, custfun=NULL, OSQP_res_abs=1e-6, OSQP_res_rel=1e-6){
   # Generalized cross-validation for ridge
   vrs = match.arg(vrs, c("C", "R"))
-  fit.r <- HuberQp(Z,Y,lambda,H,vrs=vrs,tuning = tuning,)
+  fit.r <- HuberQp(Z,Y,lambda,H,vrs=vrs,tuning=tuning,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
   GCV.scores <- GCV_crit(fit.r$resids, fit.r$hat_values, custfun=custfun)
   return(GCV.scores)
 }
@@ -492,10 +494,10 @@ GCV_HuberQp <- function(lambda, Z, Y, H, vrs="C", tuning = NULL, custfun=NULL){
 #' GCV_QuantileQp(lambda,Z,Y,H,alpha=alpha,custfun = function(r,h) sum((r/(1-h))^2))
 #' @export
 
-GCV_QuantileQp <- function(lambda, Z, Y, H, alpha=1/2, vrs="C", custfun=NULL){
+GCV_QuantileQp <- function(lambda, Z, Y, H, alpha=1/2, vrs="C", custfun=NULL, OSQP_res_abs=1e-6, OSQP_res_rel=1e-6){
   # Generalized cross-validation for ridge
   vrs = match.arg(vrs, c("C", "R"))
-  fit.r <- QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs)
+  fit.r <- QuantileQp(Z,Y,lambda,H,alpha=alpha,vrs=vrs,OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel)
   GCV.scores <- GCV_crit(fit.r$resids, fit.r$hat_values, custfun=custfun)
   return(GCV.scores)
 }
