@@ -31,7 +31,7 @@ A list of estimated parameters:
 }
 \description{
 Splits the vector of raw estimated coefficients (output of functions 
-\link{IRLS}, \link{ridge} or \link{HuberQp}) after performing \link{ts_preprocess_locationi} 
+\link{IRLS}, \link{ridge} or \link{HuberQp}) after performing \link{ts_preprocess_location} 
 into parts interpretable in the setup of thin-plate spline location 
 estimation.
 }
@@ -42,7 +42,7 @@ tobs = matrix(runif(m*d), ncol=d) # matrix of observation times
 n = 20 # sample size
 truemeanf = function(x) 10+15*x[1]^2 # true mean function
 truemean = apply(tobs,1,truemeanf) # discretized values of the true mean
-Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functiona data, size p*n
+Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functional data, size p*n
 tsp = ts_preprocess_location(Y, tobs, 2) # preprocessing matrices 
 
 lambda0 = 1e-5 # regularization parameter

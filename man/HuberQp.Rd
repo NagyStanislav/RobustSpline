@@ -2,7 +2,7 @@
 % Please edit documentation in R/Solvers.R
 \name{HuberQp}
 \alias{HuberQp}
-\title{Fast Regression with Huber Penalty - Quadratic programming solution}
+\title{Fast minimization of Huber loss - Quadratic programming solution}
 \usage{
 HuberQp(
   Z,
@@ -12,7 +12,9 @@ HuberQp(
   w = NULL,
   vrs = "C",
   tuning = 1.345,
-  toler_solve = 1e-35
+  toler_solve = 1e-35,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
 )
 }
 \arguments{
@@ -30,17 +32,21 @@ is used inside the quadratic term for penalizing estimated parameters.}
 \code{Y}. If \code{w=NULL} (default), a constant vector with values 
 \code{1/n} is used.}
 
-\item{vrs}{Version of the algorhitm to be used. The program is prepared in
+\item{vrs}{Version of the algorithm to be used. The program is prepared in
 two versions: i) \code{vrs="C"} calls the \code{C++} version of the 
-algorithm, programmed within the \code{RCppArmadillo} framework for
+algorithm, programmed within the \code{RcppArmadillo} framework for
 manipulating matrices. This is typically the fastest version, especially if p >> n. 
 ii) \code{vrs="R"} calls the \code{R} version. The two versions may 
 give slightly different results due to the different tolerances used for the solution
-of the qudratic problem.}
+of the quadratic problem.}
 
 \item{tuning}{A non-negative tuning constant for the Huber loss function. Default: 1.345.}
 
 \item{toler_solve}{Unused at the moment}
+
+\item{OSQP_res_abs}{Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).}
+
+\item{OSQP_res_rel}{Relative tolerance for OSQP quadratic programming solver (default: 1e-6).}
 }
 \value{
 A list composed of:

@@ -44,7 +44,7 @@ Fits a (robust) quantile regression estimator in a scalar-on-function
 regression problem with discretely observed predictors. The estimator is 
 based on quantile regression applied in the context of functional principal
 components. The tuning parameter \code{J} (the number of principal 
-compontents chosen) is selected using cross-validation.
+components chosen) is selected using cross-validation.
 }
 \examples{
 n = 50      # sample size

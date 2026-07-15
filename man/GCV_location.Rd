@@ -18,7 +18,9 @@ GCV_location(
   custfun = NULL,
   resids.in = rep(1, length(Y)),
   toler = 1e-07,
-  imax = 1000
+  imax = 1000,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
 )
 }
 \arguments{
@@ -72,6 +74,10 @@ but provides only a non-robust fit.}
 \item{custfun}{A custom function combining the residuals \code{resids} and
 the hat values \code{hats}. The result of the function must be numeric, 
 see \link{GCV_crit}.}
+
+\item{OSQP_res_abs}{Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).}
+
+\item{OSQP_res_rel}{Relative tolerance for OSQP quadratic programming solver (default: 1e-6).}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

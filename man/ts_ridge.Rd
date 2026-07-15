@@ -21,7 +21,7 @@ ts_ridge(
 }
 \arguments{
 \item{X}{Matrix of observed values of \code{X} of size 
-\code{n}-times-{p}, one row per observation, columns corresponding to the 
+\code{n}-times-\code{p}, one row per observation, columns corresponding to the 
 positions in the rows of \code{tobs}.}
 
 \item{Y}{Vector of responses of length \code{n}.}
@@ -55,7 +55,7 @@ the fitted models. Possible values are:
  Works only if \code{custfun} is part of the input.}
  }}
 
-\item{vrs}{Version of the algorhitm to be used in function \link{ridge}; 
+\item{vrs}{Version of the algorithm to be used in function \link{ridge}; 
 either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 \code{R} version. Both should give (nearly) identical results, see 
 \link{ridge}.}
@@ -99,7 +99,7 @@ then specifies the point from which to compute the domain \code{I}:
 that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 \code{I} can be specified also by a pair of real values \code{a<b}, 
-in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
+in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 
@@ -149,9 +149,9 @@ res = ts_ridge(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
 
 }
 \references{
-Ioannis Kalogridis and Stanislav Nagy. (2023). Robust functional regression 
+Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 with discretely sampled predictors. 
-\emph{Under review}.
+\emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 }
 \seealso{
 \link{ts_reg} for a robust version of this method.

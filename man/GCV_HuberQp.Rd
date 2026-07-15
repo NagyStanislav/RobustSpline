@@ -4,7 +4,17 @@
 \alias{GCV_HuberQp}
 \title{Cross-validation for Huber Regression}
 \usage{
-GCV_HuberQp(lambda, Z, Y, H, vrs = "C", tuning = NULL, custfun = NULL)
+GCV_HuberQp(
+  lambda,
+  Z,
+  Y,
+  H,
+  vrs = "C",
+  tuning = NULL,
+  custfun = NULL,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
+)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}
@@ -28,6 +38,10 @@ function. If left to NULL, defaults to 1.345.}
 \item{custfun}{A custom function combining the residuals \code{resids}, the 
 hat values \code{hats}. The result of the function must be numeric, see
 \link{GCV_crit}.}
+
+\item{OSQP_res_abs}{Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).}
+
+\item{OSQP_res_rel}{Relative tolerance for OSQP quadratic programming solver (default: 1e-6).}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

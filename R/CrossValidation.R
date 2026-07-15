@@ -174,6 +174,11 @@ GCV <- function(lambda, Z, Y, H, type, tuning = NULL, alpha = 1/2, sc = 1,
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, 
 #' see \link{GCV_crit}.
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -369,6 +374,11 @@ GCV_ridge <- function(lambda,Z,Y,H,vrs="C",custfun=NULL){
 #' @param custfun A custom function combining the residuals \code{resids}, the 
 #' hat values \code{hats}. The result of the function must be numeric, see
 #' \link{GCV_crit}.
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 
@@ -449,6 +459,11 @@ GCV_HuberQp <- function(lambda, Z, Y, H, vrs="C", tuning = NULL, custfun=NULL, O
 #' @param custfun A custom function combining the residuals \code{resids}, the 
 #' hat values \code{hats}. The result of the function must be numeric, see
 #' \link{GCV_crit}.
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
 #'
 #' @details Function \code{custfun} has two arguments 
 #' corresponding to \code{resids} and \code{hats}. The output of the function 

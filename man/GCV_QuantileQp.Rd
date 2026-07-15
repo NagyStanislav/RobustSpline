@@ -4,7 +4,17 @@
 \alias{GCV_QuantileQp}
 \title{Cross-validation for Quantile Regression}
 \usage{
-GCV_QuantileQp(lambda, Z, Y, H, alpha = 1/2, vrs = "C", custfun = NULL)
+GCV_QuantileQp(
+  lambda,
+  Z,
+  Y,
+  H,
+  alpha = 1/2,
+  vrs = "C",
+  custfun = NULL,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
+)
 }
 \arguments{
 \item{lambda}{A candidate parameter value; non-negative real number.}
@@ -29,6 +39,10 @@ either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the
 \item{custfun}{A custom function combining the residuals \code{resids}, the 
 hat values \code{hats}. The result of the function must be numeric, see
 \link{GCV_crit}.}
+
+\item{OSQP_res_abs}{Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).}
+
+\item{OSQP_res_rel}{Relative tolerance for OSQP quadratic programming solver (default: 1e-6).}
 }
 \value{
 A named numerical vector of values. The length of the vector depends

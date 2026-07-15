@@ -2,7 +2,7 @@
 % Please edit documentation in R/Solvers.R
 \name{IRLS}
 \alias{IRLS}
-\title{Iteratively Reweighted Least Squares for robust functional regression}
+\title{Iteratively Reweighted Least Squares for robust functional regression and location estimation}
 \usage{
 IRLS(
   Z,
@@ -50,20 +50,17 @@ taken to be \code{alpha=1/2}, which gives the absolute loss
 \code{Y}. If \code{w=NULL} (default), a constant vector with values 
 \code{1/n} is used.}
 
-\item{sc}{Scale parameter to be used in the IRLS. By default \code{sc=1}, 
-that is no scaling is performed.}
+\item{sc}{Positive scale used to standardize the residuals inside the IRLS iterations. 
+Setting \code{sc=1} disables residual scaling.}
 
 \item{resids.in}{Initialization of the vector of residuals used to launch 
-the IRLS algorithm.}
+the IRLS algorithm. Should have size \code{n}.}
 
 \item{tuning}{A non-negative tuning constant for the absolute/quantile loss 
 function (that is, \code{type="absolute"} or \code{type="quantile"}). 
-For \code{tuning = 0} the standard 
-absolute loss \code{rho(t) = |t|/2} is used (or its asymmetric version for
-the quantile loss). For \code{tuning > 0}, the Huber 
-loss is used, that is \code{rho(t)} is quadratic for \code{|t|<tuning} and 
-linear for \code{|t|>=tuning}. The function is chosen so that \code{rho} 
-is always continuously differentiable.}
+For \code{type="Huber"}, tuning is the threshold parameter of the Huber loss.
+For \code{type="absolute"} and \code{type="quantile"}, tuning controls the smooth approximation
+used by the IRLS algorithm around zero to avoid singular weights.}
 
 \item{toler}{A small positive constant specifying the tolerance level for 
 terminating the algorithm. The procedure stops if the maximum absolute 
@@ -100,7 +97,7 @@ A list composed of:
  \item{"resids"}{ A numerical vector of length \code{n} containing the final
  set of residuals in the fit of \code{Y} on \code{Z}.}
  \item{"hat_values"}{ Diagonal terms of the (possibly penalized) hat matrix of
- the form \code{Z*solve(t(Z)*W*Z+n*lambda*H)*t(Z)*W}, where \code{W} 
+ the form \code{Z*solve(t(Z)*W*Z+lambda*H)*t(Z)*W}, where \code{W} 
  is the diagonal weight matrix in the final iteration of IRLS.}
  \item{"last_check"}{ The final maximum absolute difference between 
  \code{resids} and the residuals from the previous iteration. We have 
@@ -149,7 +146,7 @@ plot(res_C$theta_hat ~ res_R$theta_hat)
 \references{
 Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 with discretely sampled predictors. 
-\emph{Computational Statistics and Data Analysis}, to appear.
+\emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 
 Peter. J. Huber. (1981). Robust Statistics, \emph{New York: John Wiley.}
 }

@@ -17,12 +17,14 @@ ts_QuantileQp(
   custfun = NULL,
   int_weights = TRUE,
   I.method = "chull",
-  I = NULL
+  I = NULL,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
 )
 }
 \arguments{
 \item{X}{Matrix of observed values of \code{X} of size 
-\code{n}-times-{p}, one row per observation, columns corresponding to the 
+\code{n}-times-\code{p}, one row per observation, columns corresponding to the 
 positions in the rows of \code{tobs}.}
 
 \item{Y}{Vector of responses of length \code{n}.}
@@ -104,7 +106,7 @@ then specifies the point from which to compute the domain \code{I}:
 that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 \code{I} can be specified also by a pair of real values \code{a<b}, 
-in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
+in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.}
 }
 \value{
 The output differs depending whether \code{jcv="all"} or 
@@ -116,7 +118,7 @@ not. If a specific cross-validation method is selected (that is,
  \item{"fitted"}{ A vector of \code{n} fitted values using the tuning 
  parameter \code{lambda}.}
  \item{"theta_hat"}{ A numerical matrix of size \code{p+1}-times-\code{1} of 
- estimated regression coefficients from \link{HuberQp}.}
+ estimated regression coefficients from \link{QuantileQp}.}
  \item{"beta_hat"}{ Estimate of the regression function \code{beta0} 
  evaluated at the \code{p} points from \code{tobs}, where \code{X} was
  observed.}
@@ -140,8 +142,8 @@ regression problem with discretely observed predictors. The tuning parameter
 }
 \details{
 Function gives a faster (non-iterative) version of the solution
-of \link{ts_reg} when \code{type="Huber"} is used. This corresponds to 
-the Huber version of an estimator.
+of \link{ts_reg} when \code{type="quantile"} is used. This corresponds to 
+the quantile version of an estimator.
 }
 \examples{
 n = 50      # sample size
@@ -150,13 +152,13 @@ X = matrix(rnorm(n*p),ncol=p) # design matrix
 Y = X[,1]   # response vector
 tobs = matrix(sort(runif(p)),ncol=1)
 
-res = ts_HuberQp(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
+res = ts_QuantileQp(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
 
 }
 \references{
 Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 with discretely sampled predictors. 
-\emph{Computational Statistics and Data Analysis}, to appear.
+\emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 }
 \seealso{
 \link{ts_reg} for an iterative version of this method.

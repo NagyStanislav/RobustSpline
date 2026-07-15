@@ -2,7 +2,7 @@
 #' @importFrom Rcpp evalCpp
 NULL
 
-#' Iteratively Reweighted Least Squares for robust functional regression
+#' Iteratively Reweighted Least Squares for robust functional regression and location estimation
 #'
 #' Iteratively Reweighted Least Squares (IRLS) algorithm that is used to 
 #' estimate a vector of regression parameters in a (possibly robust and 
@@ -36,20 +36,17 @@ NULL
 #' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
 #' \code{1/n} is used.
 #'
-#' @param sc Scale parameter to be used in the IRLS. By default \code{sc=1}, 
-#' that is no scaling is performed.
+#' @param sc Positive scale used to standardize the residuals inside the IRLS iterations. 
+#' Setting \code{sc=1} disables residual scaling.
 #'
 #' @param resids.in Initialization of the vector of residuals used to launch 
-#' the IRLS algorithm.
+#' the IRLS algorithm. Should have size \code{n}.
 #' 
 #' @param tuning A non-negative tuning constant for the absolute/quantile loss 
 #' function (that is, \code{type="absolute"} or \code{type="quantile"}). 
-#' For \code{tuning = 0} the standard 
-#' absolute loss \code{rho(t) = |t|/2} is used (or its asymmetric version for
-#' the quantile loss). For \code{tuning > 0}, the Huber 
-#' loss is used, that is \code{rho(t)} is quadratic for \code{|t|<tuning} and 
-#' linear for \code{|t|>=tuning}. The function is chosen so that \code{rho} 
-#' is always continuously differentiable.
+#' For \code{type="Huber"}, tuning is the threshold parameter of the Huber loss.
+#' For \code{type="absolute"} and \code{type="quantile"}, tuning controls the smooth approximation
+#' used by the IRLS algorithm around zero to avoid singular weights.
 #' 
 #' @param toler A small positive constant specifying the tolerance level for 
 #' terminating the algorithm. The procedure stops if the maximum absolute 
@@ -91,7 +88,7 @@ NULL
 #'  \item{"resids"}{ A numerical vector of length \code{n} containing the final
 #'  set of residuals in the fit of \code{Y} on \code{Z}.}
 #'  \item{"hat_values"}{ Diagonal terms of the (possibly penalized) hat matrix of
-#'  the form \code{Z*solve(t(Z)*W*Z+n*lambda*H)*t(Z)*W}, where \code{W} 
+#'  the form \code{Z*solve(t(Z)*W*Z+lambda*H)*t(Z)*W}, where \code{W} 
 #'  is the diagonal weight matrix in the final iteration of IRLS.}
 #'  \item{"last_check"}{ The final maximum absolute difference between 
 #'  \code{resids} and the residuals from the previous iteration. We have 
@@ -107,7 +104,7 @@ NULL
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Computational Statistics and Data Analysis}, to appear.
+#' \emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 #'
 #' Peter. J. Huber. (1981). Robust Statistics, \emph{New York: John Wiley.}
 #'
@@ -154,11 +151,11 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
       #
       Wdiag = c(w*psiw(resids.in/sc,type,alpha,tuning)/sc^2)
       naind = (is.na(Wdiag)) & (abs(resids.in)<tuning)
-      Wdiag[naind] = w[naind]*1 # division 0/0
+      Wdiag[naind] = w[naind]*1  # Handle the indeterminate form 0/0 arising when residuals are exactly zero.
       naind = (is.na(Wdiag))
       Wdiag[naind] = w[naind]*clim/abs(resids.in*sc) 
-      # if resids are too small exp(-resids) ~ Inf but in the limit always
-      # psiw(t) ~ clim/abs(t)
+      # Numerical safeguard: when residuals are extremely small, evaluate the
+      # limiting behaviour of psiw(t)/t instead of the direct expression.
       Z.s = scale(t(Z), center = FALSE, scale = 1/Wdiag);
       Z1 = Z.s%*%Z + lambda*H
       theta_new = solve(Z1, Z.s%*%Y, tol=toler_solve)
@@ -196,7 +193,7 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
     tuning = 1/100
     # warning("absolute loss, setting tuning to default 1/100.")    
   }
-  if(is.null(tuning)) tuning = 1/100 # tuning for logistic regression
+  if(is.null(tuning)) tuning = 1/100 # tuning for logistic loss
   #
   if(nrow(Z)!=length(Y)) 
     stop("Number of rows of Z must equal the lenght of Y.")
@@ -224,11 +221,12 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
                              tuning, toler, imax, toler_solve))
 }
 
-#' Fast Ridge Regression with given penalty matrix
+#' Fast minimization of square loss with given penalty matrix
 #'
-#' A (weighted) ridge regression estimator with a specified penalty matrix
-#' in a linear regression model. The solution corresponds to the 
-#' result of function \link{IRLS} with \code{type="square"}.
+#' A (weighted) ridge regression/location estimator with a specified penalty matrix
+#' for a linear regression model. The estimator is obtained by solving the
+#' penalized least squares problem directly and corresponds to the solution
+#' returned by \link{IRLS} with \code{type="square"}.
 #'
 #' @param Z Data matrix of dimension \code{n}-times-\code{p}, where \code{n} is
 #' the number of observations, \code{p} is the dimension.
@@ -237,14 +235,14 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
 #'
 #' @param lambda Tuning parameter, a non-negative real number.
 #'
-#' @param H Penalty matrix of size \code{p}-times-\code{p} that
+#' @param H PSD penalty matrix of size \code{p}-times-\code{p} that
 #' is used inside the quadratic term for penalizing estimated parameters.
 #' 
 #' @param w Vector of length \code{n} of weights attached to the elements of 
 #' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
 #' \code{1/n} is used.
 #' 
-#' @param vrs Version of the algorhitm to be used. The program is prepared in
+#' @param vrs Version of the algorithm to be used. The program is prepared in
 #' two versions: i) \code{vrs="C"} calls the \code{C++} version of the 
 #' algorithm, programmed within the \code{RCppArmadillo} framework for
 #' manipulating matrices. This is typically the fastest version. 
@@ -262,7 +260,7 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
 #'
 #' @details Especially for extremely small values of \code{lambda}, numerically
 #' singular matrices must be inverted in the procedure. This may cause numerical
-#' instabilites, and is the main cause for differences in results when using
+#' instabilities, and is the main cause for differences in results when using
 #' \code{vrs="C"} and \code{vrs="R"}. This function is equivalent with 
 #' \link{IRLS} when used with the square loss \code{type="square"}, but faster
 #' and more stable as it does not perform the iterative algorithm. Instead, it 
@@ -272,12 +270,12 @@ IRLS = function(Z, Y, lambda, H, type, alpha=1/2, w=NULL, sc = 1,
 #' \itemize{
 #'  \item{"theta_hat"}{ A numerical matrix of size \code{p}-times-\code{1} of 
 #'  estimated regression coefficients.}
-#'  \item{"resids"}{ A numerical vecotor of length \code{n} containing the final
+#'  \item{"resids"}{ A numerical vector of length \code{n} containing the final
 #'  set of residuals in the fit of \code{Y} on \code{Z}.}
 #'  \item{"hat_values"}{ Diagonal terms of the (penalized) hat matrix of
 #'  the form \code{Z*solve(t(Z)*Z + n*lambda*H)*t(Z)}.}
 #'  \item{"fitted"}{ Fitted values in the model. A vector of length \code{n} 
-#'  correponding to the fits of \code{Y}.}
+#'  corresponding to the fits of \code{Y}.}
 #' }
 #' 
 #' @seealso \link{IRLS} for a robust version of this
@@ -311,7 +309,7 @@ ridge = function(Z, Y, lambda, H, w=NULL, vrs="C", toler_solve=1e-35){
   if(is.null(w)) w = rep(1/n,n)
   vrs = match.arg(vrs,c("C","R"))
   if(nrow(Z)!=length(Y)) 
-    stop("Number of rows of Z must equal the lenght of Y.")
+    stop("Number of rows of Z must equal the length of Y.")
   if(nrow(H)!=ncol(Z))
     stop("H must be a square matrix with the same number of columns as Z.")
   if(ncol(H)!=ncol(Z))
@@ -336,7 +334,7 @@ ridge = function(Z, Y, lambda, H, w=NULL, vrs="C", toler_solve=1e-35){
   if(vrs=="R") return(ridge_R(Z, Y, lambda, H, w, toler_solve))
 }
 
-#' Fast Regression with Huber Penalty - Quadratic programming solution
+#' Fast minimization of Huber loss - Quadratic programming solution
 #'
 #' A Huber regression estimator with a specified penalty matrix
 #' in a linear functional regression model. The solution corresponds to the 
@@ -356,17 +354,22 @@ ridge = function(Z, Y, lambda, H, w=NULL, vrs="C", toler_solve=1e-35){
 #' \code{Y}. If \code{w=NULL} (default), a constant vector with values 
 #' \code{1/n} is used.
 #' 
-#' @param vrs Version of the algorhitm to be used. The program is prepared in
+#' @param vrs Version of the algorithm to be used. The program is prepared in
 #' two versions: i) \code{vrs="C"} calls the \code{C++} version of the 
-#' algorithm, programmed within the \code{RCppArmadillo} framework for
+#' algorithm, programmed within the \code{RcppArmadillo} framework for
 #' manipulating matrices. This is typically the fastest version, especially if p >> n. 
 #' ii) \code{vrs="R"} calls the \code{R} version. The two versions may 
 #' give slightly different results due to the different tolerances used for the solution
-#' of the qudratic problem.
+#' of the quadratic problem.
 #' 
 #' @param tuning A non-negative tuning constant for the Huber loss function. Default: 1.345.
 #'
 #' @param toler_solve Unused at the moment
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
 #'
 #' @details This function is equivalent with 
 #' \link{IRLS} when used with the square loss \code{type="Huber"}, but faster 
@@ -441,7 +444,7 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
     sol = HuberQpC(Z_sparse, Y, 2*lambda*H, w, delta = tuning, OSQP_res_abs, OSQP_res_rel)
   }
   
-  huber_qp_osqp_penalized <- function(X, y, H, w, delta = 1.345, OSQP_res_abs = 1e-6, OSQP_res_abs = 1e-6) {
+  huber_qp_osqp_penalized <- function(X, y, H, w, delta = 1.345, OSQP_res_abs = 1e-6, OSQP_res_rel = 1e-6) {
     # Input validation
     if (!is.matrix(X)) stop("X must be a matrix")
     if (!is.vector(y)) stop("y must be a vector")
@@ -557,7 +560,7 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
   }
 }
 
-#' Fast Regression with Quantile (and absolute) Penalty - Quadratic programming solution
+#' Fast minimization of Quantile (and absolute) loss - Quadratic programming solution
 #'
 #' A Quantile regression estimator with a specified penalty matrix
 #' in a linear functional regression model. The solution corresponds to the 
@@ -590,6 +593,11 @@ HuberQp = function(Z, Y, lambda, H, w=NULL, vrs="C", tuning = 1.345, toler_solve
 #' of the quadratic problem.
 #'
 #' @param toler_solve Unused at the moment
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
 #'
 #' @details This function is equivalent with 
 #' \link{IRLS} when used with the loss \code{type="Absolute"} if \code{alpha} = 1/2 and  \code{type="Quantile"} otherwise,
@@ -1105,13 +1113,13 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
 #' This is particularly useful for computing Generalized Cross-Validation (GCV) 
 #' when the full hat matrix is too large to be explicitly formed or inverted.
 #'
-#' @param Z The design matrix of dimension $n \times p$.
+#' @param Z The design matrix of dimension $n times p$.
 #'
-#' @param M The system matrix of dimension $p \times p$ that needs to be inverted. 
-#' Typically, in a penalized likelihood context, this corresponds to $M = (Z^T W Z + \lambda K)$, 
-#' where $\lambda$ is the smoothing parameter and $K$ is the penalty matrix.
+#' @param M The system matrix of dimension $p times p$ that needs to be inverted. 
+#' Typically, in a penalized likelihood context, this corresponds to $M = (Z^T W Z + lambda * K)$, 
+#' where \code{lambda} is the smoothing parameter and $K$ is the penalty matrix.
 #'
-#' @param W The weight matrix of dimension $n \times n$. Usually a diagonal 
+#' @param W The weight matrix of dimension $n times n$. Usually a diagonal 
 #' matrix containing weights or inverse variances.
 #'
 #' @param nrep The number of Monte Carlo iterations (random vectors) used 
@@ -1120,8 +1128,8 @@ vorArea = function(x, I.method = "chull", I=NULL, scale = TRUE, plot = FALSE){
 #'
 #' @details The function uses the Hutchinson trick, which leverages the property 
 #' that for a random vector $v$ with entries sampled from a Rademacher 
-#' distribution (independent $\pm 1$ with probability 0.5), the expected 
-#' value of $v \odot (Hv)$ is the diagonal of $H$. Here, $H$ is the 
+#' distribution, the expected 
+#' value of $v %*% (Hv)$ is the diagonal of $H$. Here, $H$ is the 
 #' implicit smoothing matrix $H = Z M^{-1} Z^T W$.
 #'
 #' @return A numerical vector of length $n$ containing the estimated 

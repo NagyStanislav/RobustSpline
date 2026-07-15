@@ -7,13 +7,13 @@
 hutch_diag(Z, M, W, nrep = 100)
 }
 \arguments{
-\item{Z}{The design matrix of dimension $n \times p$.}
+\item{Z}{The design matrix of dimension $n times p$.}
 
-\item{M}{The system matrix of dimension $p \times p$ that needs to be inverted. 
-Typically, in a penalized likelihood context, this corresponds to $M = (Z^T W Z + \lambda K)$, 
-where $\lambda$ is the smoothing parameter and $K$ is the penalty matrix.}
+\item{M}{The system matrix of dimension $p times p$ that needs to be inverted. 
+Typically, in a penalized likelihood context, this corresponds to $M = (Z^T W Z + lambda * K)$, 
+where \code{lambda} is the smoothing parameter and $K$ is the penalty matrix.}
 
-\item{W}{The weight matrix of dimension $n \times n$. Usually a diagonal 
+\item{W}{The weight matrix of dimension $n times n$. Usually a diagonal 
 matrix containing weights or inverse variances.}
 
 \item{nrep}{The number of Monte Carlo iterations (random vectors) used 
@@ -33,8 +33,8 @@ when the full hat matrix is too large to be explicitly formed or inverted.
 \details{
 The function uses the Hutchinson trick, which leverages the property 
 that for a random vector $v$ with entries sampled from a Rademacher 
-distribution (independent $\pm 1$ with probability 0.5), the expected 
-value of $v \odot (Hv)$ is the diagonal of $H$. Here, $H$ is the 
+distribution, the expected 
+value of $v %*% (Hv)$ is the diagonal of $H$. Here, $H$ is the 
 implicit smoothing matrix $H = Z M^{-1} Z^T W$.
 }
 \examples{

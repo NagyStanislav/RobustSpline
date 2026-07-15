@@ -479,7 +479,6 @@ Rcpp::List ridgeC (arma::mat Z, arma::vec Y, double lambda, arma::mat H, arma::v
 /// - Col ptr: [0, 2, 3, 5]  (column j starts at index p[j], ends at p[j+1]-1)
 /// 
 /// @note Efficiency: Direct memory mapping avoids copying.
-// [[Rcpp::export]]
 static void spmat_to_osqp_csc(const arma::sp_mat& S,
 			      std::vector<OSQPFloat>& x,
 			      std::vector<OSQPInt>& i,

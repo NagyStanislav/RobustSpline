@@ -15,7 +15,7 @@ possible to be supplied as a long vector of length \code{p*n}, stacked by
 columns of the matrix \code{Y}. If \code{Y} contains missing values 
 \code{NA}, it must be a matrix.}
 
-\item{tobs}{Domain locations for the observed points of \code{X}. Matrix
+\item{tobs}{Domain locations for the observed points of \code{Y}. Matrix
 of size \code{p}-times-\code{d}, one row per domain point.}
 
 \item{r}{Order of the thin-plate spline, positive integer.}

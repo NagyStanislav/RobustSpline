@@ -44,7 +44,7 @@ then specifies the point from which to compute the domain \code{I}:
 that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 \code{I} can be specified also by a pair of real values \code{a<b}, 
-in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.}
+in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.}
 }
 \value{
 A list of values:

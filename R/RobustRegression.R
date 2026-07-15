@@ -386,7 +386,7 @@ transform_theta = function(theta,tspr){
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Computational Statistics and Data Analysis}, to appear.
+#' \emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 #'
 #' @seealso \link{ts_ridge} for a faster (non-robust) version of
 #' this method applied with \code{type="square"}.
@@ -671,7 +671,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Computational Statistics and Data Analysis}, to appear.
+#' \emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 #'
 #' @examples
 #' n = 50      # sample size
@@ -883,6 +883,10 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
 #' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
 #' @details Function gives a faster (non-iterative) version of the solution
 #' of \link{ts_reg} when \code{type="Huber"} is used. This corresponds to 
 #' the Huber version of an estimator.
@@ -918,7 +922,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Computational Statistics and Data Analysis}, to appear.
+#' \emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308
 #'
 #' @examples
 #' n = 50      # sample size
@@ -1171,7 +1175,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Computational Statistics and Data Analysis}, to appear.
+#' \emph{Computational Statistics and Data Analysis}, DOI: https://doi.org/10.1016/j.csda.2025.108308 
 #'
 #' @examples
 #' n = 50      # sample size

@@ -2,7 +2,7 @@
 % Please edit documentation in R/Solvers.R
 \name{QuantileQp}
 \alias{QuantileQp}
-\title{Fast Regression with Quantile (and absolute) Penalty - Quadratic programming solution}
+\title{Fast minimization of Quantile (and absolute) loss - Quadratic programming solution}
 \usage{
 QuantileQp(
   Z,
@@ -12,7 +12,9 @@ QuantileQp(
   alpha = 1/2,
   w = NULL,
   vrs = "C",
-  toler_solve = 1e-35
+  toler_solve = 1e-35,
+  OSQP_res_abs = 1e-06,
+  OSQP_res_rel = 1e-06
 )
 }
 \arguments{
@@ -43,6 +45,10 @@ give slightly different results due to the different tolerances used for the sol
 of the quadratic problem.}
 
 \item{toler_solve}{Unused at the moment}
+
+\item{OSQP_res_abs}{Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).}
+
+\item{OSQP_res_rel}{Relative tolerance for OSQP quadratic programming solver (default: 1e-6).}
 }
 \value{
 A list composed of:
