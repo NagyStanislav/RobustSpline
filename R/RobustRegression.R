@@ -428,7 +428,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
                   resids.in = rep(1,length(Y)),
                   toler=1e-7, imax=1000,
                   tolerGCV=toler, imaxGCV=imax,
-                  echo = FALSE,
+                  echo = FALSE
                   ){
   
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
