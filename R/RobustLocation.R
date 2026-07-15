@@ -12,7 +12,7 @@
 #'  columns of the matrix \code{Y}. If \code{Y} contains missing values 
 #'  \code{NA}, it must be a matrix.
 #'  
-#' @param tobs Domain locations for the observed points of \code{X}. Matrix
+#' @param tobs Domain locations for the observed points of \code{Y}. Matrix
 #'  of size \code{p}-times-\code{d}, one row per domain point.
 #' 
 #' @param r Order of the thin-plate spline, positive integer.
@@ -81,9 +81,9 @@
 
 ts_preprocess_location = function(Y, tobs, r){
   
-  # Y Observed values of functional data of size \code{p}-times-\code{n}
-  # tobs Domain locations for the observed points of size \code{p}-times-\code{d}
-  # r Order of the thin-plate spline, positive integer.
+  # Y: Observed values of functional data of size p-times-n
+  # tobs: Domain locations for the observed points of size p-times-d
+  # r: Order of the thin-plate spline, positive integer.
   
   p = nrow(tobs)    # number of distinct observation points
   d = ncol(tobs)    # dimension of the domain
@@ -241,8 +241,11 @@ ts_preprocess_location = function(Y, tobs, r){
 
 ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
   
-  # tobs Domain locations for the observed points of size \code{p}-times-\code{d}
-  # r Order of the thin-plate spline, positive integer.
+  # tobs: Domain locations for the observed points of size p-times-d
+  # tobsnew: Domain locations for new prediction points of size p2-times-d
+  # gamma: Vector of thin-plate spline parameters (penalty space)
+  # delta: Vector of thin-plate spline parameters (polynomial space)
+  # r: Order of the thin-plate spline, positive integer.
   
   p = nrow(tobs)    # number of distinct observation points
   d = ncol(tobs)    # dimension of the domain
@@ -267,7 +270,7 @@ ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
   # Matrix Omega for the penalty term
   Omega = eta(Em,d,r)
   
-  # Matrix Phi, monomials evaluated at tobs
+  # Matrix Phi, monomials evaluated at tobsnew
   Phi = apply(degs,1,function(x) apply(t(tobsnew)^x,2,prod))
   
   return(Omega%*%gamma + Phi%*%delta)        
@@ -276,7 +279,7 @@ ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
 #' Transform the vector of estimated coefficients for location estimation
 #'
 #' Splits the vector of raw estimated coefficients (output of functions 
-#' \link{IRLS}, \link{ridge} or \link{HuberQp}) after performing \link{ts_preprocess_locationi} 
+#' \link{IRLS}, \link{ridge} or \link{HuberQp}) after performing \link{ts_preprocess_location} 
 #' into parts interpretable in the setup of thin-plate spline location 
 #' estimation.
 #'
@@ -308,7 +311,7 @@ ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
 #' n = 20 # sample size
 #' truemeanf = function(x) 10+15*x[1]^2 # true mean function
 #' truemean = apply(tobs,1,truemeanf) # discretized values of the true mean
-#' Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functiona data, size p*n
+#' Y = replicate(n, truemean + rnorm(m)) # matrix of discrete functional data, size p*n
 #' tsp = ts_preprocess_location(Y, tobs, 2) # preprocessing matrices 
 #' 
 #' lambda0 = 1e-5 # regularization parameter
@@ -403,23 +406,24 @@ transform_theta_location = function(theta, tspr){
 #'  Works only if \code{custfun} is part of the input.}
 #'  }
 #'  
-#' @param vrs Version of the algorhitm to be used in function \link{ridge}; 
+#' @param vrs Version of the algorithm to be used in function \link{ridge}; 
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give (nearly) identical results, see 
 #' \link{IRLS}.
 #' 
 #' @param method A method for estimating the fit. Possible options are 
-#' \code{"IRLS"} for the IRLS algorithm, \code{"ridge"} for ridge regression, or
-#' \code{"HuberQp"} for Huber regression based on quadratic programming.
+#' \code{"IRLS"} for the IRLS algorithm, \code{"ridge"} for ridge regression, 
+#' \code{"HuberQp"} for Huber regression based on quadratic programming, or
+#' \code{"QuantileQp"} for quantile regression based on quadratic programming.
 #' Ridge is applicable only if \code{type="square"}; this method is much faster,
-#' but provides only a non-robust fit. HuberQp is applicable only if \code{type="huber"};
-#' this method is faster than the IRLS and also provides a robust fit. However, is not 
-#' as fast as ridge.
+#' but provides only a non-robust fit. HuberQp is applicable only if \code{type="Huber"};
+#' QuantileQp is applicable only if \code{type="quantile"} or \code{type="absolute"}.
+#' These QP methods are faster than IRLS and provide robust fits.
 #' 
 #' @param plotCV Indicator of whether a plot of the evaluated cross-validation 
-#' criteria as a function of \code{lambda} should be given.
+#' criteria as a function of \code{lambda} should be displayed.
 #' 
-#' @param lambda_grid An optional grid for select \code{lambda} from. By default
+#' @param lambda_grid An optional grid for selecting \code{lambda} values. By default
 #' this is set to be an exponential of a grid of \code{lambda_length} 
 #' equidistant values in the interval from -28 to -1.
 #' 
@@ -428,41 +432,58 @@ transform_theta_location = function(theta, tspr){
 #'
 #' @param custfun A custom function combining the residuals \code{resids} and
 #' the hat values \code{hats}. The result of the function must be numeric, see 
-#' \link{GCV_crit}.
+#' \link{GCV_crit}. Required if \code{jcv="custom"}.
 #' 
-#' @return The output differs depending whether \code{jcv="all"} or 
-#' not. If a specific cross-validation method is selected (that is, 
-#' \code{jcv} is not \code{"all"}), a list is returned:
+#' @param resids.in Initial residuals vector for weighted regression (internal parameter).
+#' 
+#' @param toler Convergence tolerance for IRLS algorithm (default: 1e-7).
+#' 
+#' @param imax Maximum number of iterations for IRLS algorithm (default: 1000).
+#' 
+#' @param tolerGCV Convergence tolerance for GCV criterion evaluation (default: same as \code{toler}).
+#' 
+#' @param imaxGCV Maximum number of iterations for GCV criterion evaluation (default: same as \code{imax}).
+#' 
+#' @param echo Logical indicator for printing intermediate results during fitting (default: FALSE).
+#' 
+#' @param OSQP_res_abs Absolute tolerance for OSQP quadratic programming solver (default: 1e-6).
+#' 
+#' @param OSQP_res_rel Relative tolerance for OSQP quadratic programming solver (default: 1e-6).
+#'
+#' @return The output differs depending on whether \code{jcv="all"} or not. 
+#' If a specific cross-validation method is selected (that is, \code{jcv} is not \code{"all"}), 
+#' a list is returned with the following components:
 #'  \itemize{
 #'  \item{"lambda"}{ The selected tuning parameter \code{lambda} that minimizes
 #'  the chosen cross-validation criterion.}
-#'  \item{"fitted"}{ A vector of fitted values using the tuning 
+#'  \item{"fitted"}{ A vector of fitted values using the selected tuning 
 #'  parameter \code{lambda}. The length of this vector equals \code{m}, the 
 #'  number of non-missing values in the matrix \code{Y}. If \code{Y} does not
 #'  contain missing values, the length of this vector is \code{n*p}.}
-#'  \item{"residuals"}{ A vector or a matrix of the same structure as 
-#'  \code{fitted} with the residuals \code{Y - fitted} in each column.} 
-#'  \item{"theta_hat"}{ A numerical matrix of size \code{p}-times-\code{1} of 
-#'  estimated regression coefficients from \link{IRLS}.}
+#'  \item{"residuals"}{ A vector of the same structure as \code{fitted} 
+#'  with the residuals \code{Y - fitted}.} 
+#'  \item{"theta_hat"}{ A numerical vector of length \code{p} of 
+#'  estimated regression coefficients from the selected estimation method.}
 #'  \item{"beta_hat"}{ The final location estimate \code{beta} 
 #'  evaluated at the \code{p} points from \code{tobs}, where \code{Y} was
 #'  observed. A numerical vector of length \code{p}.}
+#'  \item{"gamma_hat"}{ Estimate of the penalty space coefficients. A vector of length \code{p}.}
+#'  \item{"delta_hat"}{ Estimate of the polynomial space coefficients. A vector of length \code{M}.}
 #'  \item{"hat_values"}{ Diagonal terms of the (possibly penalized and weighted)
 #'  hat matrix of the form \code{Z*solve(t(Z)*W*Z+n*lambda*H)*t(Z)*W}, 
 #'  where \code{W} is the diagonal weight matrix in the final iteration 
 #'  of \link{IRLS}. A numerical vector of length \code{m}.}
 #'  \item{"weights"}{ The vector of weights given to the observations in the 
-#'  final iteration of \link{IRLS}. A numerical vector of length \code{m}.}
-#'  \item{"converged"}{ Indicator whether the \link{IRLS} procedure succefully 
-#'  converged. Takes value 1 if IRLS converged, 0 otherwise.}
-#'  \item{"obj_fun"}{ Objective function evaluated in the estimated theta hat.}
+#'  final iteration of the selected method. A numerical vector of length \code{m}.
+#'  Only present when \code{method="IRLS"}.}
+#'  \item{"converged"}{ Indicator whether the estimation procedure successfully 
+#'  converged. Takes value 1 if converged, 0 otherwise. Only present when \code{method="IRLS"}.}
+#'  \item{"obj_fun"}{ Objective function value evaluated at the estimated coefficients.}
 #' }
-#' In case when \code{jcv="all"}, all these values are given for each 
-#' cross-validation method considered. For \code{lambda} and \code{converged} 
-#' provides a list of length 6 or 7 (depending on whether \code{custfun} is 
-#' specified); for \code{fitted}, \code{beta_hat},
-#' \code{hat_values}, and \code{weights} it gives a matrix with 6 or 7 
-#' columns, each corresponding to one cross-validation method. 
+#' 
+#' If \code{jcv="all"}, all these components are returned as lists (for \code{lambda} and \code{converged}) 
+#' or matrices (for other components), with each column corresponding to one cross-validation method.
+#' The number of columns depends on whether \code{custfun} is provided (6 or 7 methods).
 #'
 #' @references
 #' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust multidimensional 
@@ -520,7 +541,7 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
   if(jcv=="rGCV(tr)") jcv = 6
   if(jcv=="custom") jcv = 7
   if(jcv==7 & is.null(custfun)) stop("With custom cross-validation, 
-                                    cusfun must be provided.")
+                                    custfun must be provided.")
   
   # pre-processing for thin-plate splines
   tspr = ts_preprocess_location(Y, tobs, r)
@@ -533,7 +554,7 @@ ts_location = function(Y, tobs, r, type, alpha=1/2, tuning = NULL,
   
   if(is.null(lambda_grid)){
     # define grid for search for lambda
-    rho1 = -12  # search range minimium exp(rho1)
+    rho1 = -12  # search range minimum exp(rho1)
     rho2 = -1   # search range maximum exp(rho2)
     if(is.null(lambda_length)) lambda_length = 20
     lambda_grid = exp(seq(rho1,rho2,length=lambda_length-1))
