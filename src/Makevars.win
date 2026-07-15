@@ -1,17 +1,74 @@
-# Definiamo le cartelle
+# ==============================================================================
+# File: Makevars.win
+# Purpose: Compilation configuration for RobustSpline package (Windows only)
+# 
+# This file configures the build process on Windows systems (detected by R's
+# build system). It is analogous to Makevars (Unix/Linux/macOS) but includes
+# Windows-specific settings and library paths.
+#
+# The OSQP (Operator Splitting Quadratic Programming) library must be compiled
+# before running package build (see build instructions in main README).
+# ==============================================================================
+
+# ==============================================================================
+# Directory Configuration
+# ==============================================================================
+# OSQP_DIR:   Root directory of the OSQP source code (included in package)
+# OSQP_BUILD: Build output directory for compiled OSQP objects and libraries
+# ==============================================================================
 OSQP_DIR = osqp
 OSQP_BUILD = $(OSQP_DIR)/build
 
-# Flag del compilatore
-# Includiamo gli header di OSQP e quelli generati nella cartella build
+# ==============================================================================
+# Compiler Flags (C++ Preprocessor)
+# ==============================================================================
+# PKG_CPPFLAGS: Include paths for header files during preprocessing
+#
+# -I$(OSQP_DIR)/include           : OSQP public headers (API definitions)
+# -I$(OSQP_BUILD)/include         : Generated headers from OSQP CMake build
+#                                   (Contains os-specific and config headers)
+# ==============================================================================
 PKG_CPPFLAGS = -I$(OSQP_DIR)/include -I$(OSQP_BUILD)/include
 
-# Flag del linker
-# 1. Includiamo i flag standard per OpenMP e le librerie matematiche
-# 2. Puntiamo al file .a usando il percorso reale trovato
-# 3. Aggiungiamo -lws2_32 (fondamentale per Windows)
+# ==============================================================================
+# Linker Flags (Library Linking) - Windows Specific
+# ==============================================================================
+# PKG_LIBS: Flags and libraries to link during the final linking stage
+#
+# Standard components (same as Unix Makevars):
+# $(SHLIB_OPENMP_CXXFLAGS): OpenMP support for parallelization
+#                           (used by Armadillo for parallel linear algebra)
+#
+# $(LAPACK_LIBS):           LAPACK library (linear algebra, factorizations)
+#                           Required by Armadillo and OSQP
+#
+# $(BLAS_LIBS):             BLAS library (basic linear algebra operations)
+#                           Required by Armadillo and OSQP
+#
+# $(FLIBS):                 Fortran runtime libraries
+#                           Required if LAPACK/BLAS use Fortran
+#
+# Windows-specific components:
+# $(OSQP_BUILD)/src/osqp/build/out/libosqpstatic.a:
+#                           Static OSQP library (full path for Windows)
+#                           Contains the core solver implementation
+#
+# -lws2_32:                 Windows Sockets 2 library (CRITICAL ON WINDOWS)
+#                           Required by OSQP for network operations
+#                           Omitting this will cause linking failures on Windows
+#
+# Note: The OSQP build path on Windows differs from Unix due to CMake
+#       subdirectory structure. Ensure the path matches your build output.
+# ==============================================================================
 PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) \
            $(OSQP_BUILD)/src/osqp/build/out/libosqpstatic.a -lws2_32
 
-# Flag C++
+# ==============================================================================
+# C++ Compiler Flags
+# ==============================================================================
+# PKG_CXXFLAGS: Additional C++ compiler flags
+#
+# $(SHLIB_OPENMP_CXXFLAGS): Enables OpenMP support in C++ code
+#                           Allows parallel loops and parallel matrix operations
+# ==============================================================================
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)

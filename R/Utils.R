@@ -507,7 +507,7 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
     delta = coefs[-(1:p)]
     
     # Matrices Omega and Phi for evaluating interpolated function
-    Em.out = distnAB(tobs.out,tobs,p.out,p,d)
+    Em.out = distnAB(tobs.out,tobs,p.out,p)
     Omega.out = eta(Em.out,d,r)
     Phi.out = apply(degs,1,function(x) apply(t(tobs.out)^x,2,prod))
     #

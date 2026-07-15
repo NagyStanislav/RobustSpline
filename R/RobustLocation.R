@@ -262,7 +262,7 @@ ts_predict_location = function(tobs, tobsnew, gamma, delta, r){
   if(M!=choose(r+d-1,d)) stop("Error in degrees of polynomials")
   
   # Fast matrix of Euclidean distances
-  Em = distnAB(tobsnew, tobs, nrow(tobsnew), nrow(tobs), ncol(tobs))
+  Em = distnAB(tobsnew, tobs, nrow(tobsnew), nrow(tobs))
   
   # Matrix Omega for the penalty term
   Omega = eta(Em,d,r)
