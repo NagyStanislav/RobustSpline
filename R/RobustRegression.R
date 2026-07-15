@@ -40,7 +40,7 @@
 #' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 #' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
-#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #'
 #' @return A list of values:
 #' \itemize{
@@ -110,24 +110,12 @@ ts_preprocess = function(X, tobs, m, int_weights=TRUE,
   if(p-M<=0) stop(paste("p must be larger than",M))
   if(2*m<=d) stop(paste("m must be larger than",ceiling(d/2)))
   
-  # Establishing the weights for integration in one-dimensional domain
+  # Establishing the weights for integration in the domain
   if(int_weights) 
     integral_weights = vorArea(x = tobs, I.method=I.method, I=I) else
       integral_weights = rep(1/p,p)
-  # The domain is taken to be the set [0,1]^d
   
-  # if(d==1 & int_weights){
-  #   if(any(order(tobs)!=1:p))
-  #     stop("For numerical integration, values of tobs must be ordered.")
-  #   mids = c(0,(tobs[-1]+tobs[-p])/2,1) # midpoints between adjacent intervals
-  #   integral_weights = diff(mids)
-  #   if(sum(integral_weights)!=1)
-  #     stop("Problem with computing integrating weights.")
-  #   # weights given in the one-dimensional integration to the points tobs
-  # } else integral_weights = rep(1/p,p)
-  # # For multidimensional domain the weights are taken to be equal
-  
-  # Monomials phi of order <m
+  # Compute monomials phi of order < m
   allcom = expand.grid(replicate(d, 0:(m-1), simplify=FALSE))
   degs = as.matrix(allcom[rowSums(allcom)<m,,drop=FALSE])
   M = nrow(degs)
@@ -140,12 +128,10 @@ ts_preprocess = function(X, tobs, m, int_weights=TRUE,
   # Matrix Omega for the penalty term
   Omega = eta(Em,d,m)
   
-  # Matrix Phi, monomials evaluated at tobs
+  # Matrix Phi: monomials evaluated at tobs
   Phi = apply(degs,1,function(x) apply(t(tobs)^x,2,prod))
-  # Phi = matrix(nrow=p,ncol=M)
-  # for(i in 1:p) for(j in 1:M) Phi[i,j] = prod(tobs[i,]^degs[j,])
   
-  # Null space of the rows of Phi p-(p-M)
+  # Null space of the rows of Phi: dimension (p-M)
   Q = MASS::Null(Phi)
   
   # Test that t(Phi)%*%Q = 0
@@ -298,7 +284,7 @@ transform_theta = function(theta,tspr){
 #' @param sc Scale parameter to be used in the IRLS. By default \code{sc=1}, 
 #' that is no scaling is performed.
 #' 
-#' @param vrs Version of the algorhitm to be used in function \link{IRLS}; 
+#' @param vrs Version of the algorithm to be used in function \link{IRLS}; 
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give (nearly) identical results, see 
 #' \link{IRLS}.
@@ -342,13 +328,13 @@ transform_theta = function(theta,tspr){
 #' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 #' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
-#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #' 
 #' @param resids.in Initialization of the vector of residuals used to launch 
 #' the IRLS algorithms. Optional.
 #' 
 #' @param toler A small positive constant specifying the tolerance level for 
-#' terminating the algorithm. The prcedure stops if the maximum absolute 
+#' terminating the algorithm. The procedure stops if the maximum absolute 
 #' distance between the residuals in the previous iteration and the new 
 #' residuals drops below \code{toler}.
 #' 
@@ -356,7 +342,7 @@ transform_theta = function(theta,tspr){
 #'
 #' @param tolerGCV A small positive constant specifying the tolerance level for 
 #' terminating the algorithm when the cross-validation is performed. 
-#' The prcedure stops if the maximum absolute 
+#' The procedure stops if the maximum absolute 
 #' distance between the residuals in the previous iteration and the new 
 #' residuals drops below \code{tolerGCV}.
 #' 
@@ -387,7 +373,7 @@ transform_theta = function(theta,tspr){
 #'  \item{"weights"}{ The vector of weights given to the observations in the 
 #'  final iteration of \link{IRLS}. For squared loss (\code{type="square"})
 #'  this gives a vector whose all elements are 2.}
-#'  \item{"converged"}{ Indicator whether the \link{IRLS} procedure succefully 
+#'  \item{"converged"}{ Indicator whether the \link{IRLS} procedure successfully 
 #'  converged. Takes value 1 if IRLS converged, 0 otherwise.}
 #' }
 #' In case when \code{jcv="all"}, all these values are given for each 
@@ -453,7 +439,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
   
   if(is.null(lambda_grid)){
     # define grid for search for lambda
-    rho1 = -28  # search range minimium exp(rho1)
+    rho1 = -28  # search range minimum exp(rho1)
     rho2 = -1   # search range maximum exp(rho2)
     lambda_length = 51
     lambda_grid = exp(c(-Inf,seq(rho1,rho2,length=lambda_length-1)))
@@ -461,8 +447,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
     if(!is.numeric(lambda_grid)) 
       stop("Grid for lambda values must contain numeric values.")
     if(any(lambda_grid<0)) 
-      stop("Grid for lambda values must contain non-negative 
-           values.")
+      stop("Grid for lambda values must contain non-negative values.")
     lambda_length = length(lambda_grid)
   }
   GCVfull <- Vectorize(
@@ -571,7 +556,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
 #' \code{lambda} is selected using a specified cross-validation criterion.
 #'
 #' @param X Matrix of observed values of \code{X} of size 
-#'  \code{n}-times-{p}, one row per observation, columns corresponding to the 
+#'  \code{n}-times-\code{p}, one row per observation, columns corresponding to the 
 #'  positions in the rows of \code{tobs}.
 #'
 #' @param Y Vector of responses of length \code{n}.
@@ -605,7 +590,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
 #'  Works only if \code{custfun} is part of the input.}
 #'  }
 #'  
-#' @param vrs Version of the algorhitm to be used in function \link{ridge}; 
+#' @param vrs Version of the algorithm to be used in function \link{ridge}; 
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give (nearly) identical results, see 
 #' \link{ridge}.
@@ -649,7 +634,7 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
 #' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 #' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
-#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #' 
 #' @details Function gives a faster (non-iterative) version of the solution
 #' of \link{ts_reg} when \code{type="square"} is used. This corresponds to 
@@ -684,9 +669,9 @@ ts_reg = function(X, Y, tobs, m, type, alpha=1/2, jcv = "all",
 #' @seealso \link{ts_reg} for a robust version of this method.
 #'
 #' @references
-#' Ioannis Kalogridis and Stanislav Nagy. (2023). Robust functional regression 
+#' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Under review}.
+#' \emph{Computational Statistics and Data Analysis}, to appear.
 #'
 #' @examples
 #' n = 50      # sample size
@@ -725,7 +710,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
   
   if(is.null(lambda_grid)){
     # define grid for search for lambda
-    rho1 = -28  # search range minimium exp(rho1)
+    rho1 = -28  # search range minimum exp(rho1)
     rho2 = -1   # search range maximum exp(rho2)
     lambda_length = 51
     lambda_grid = exp(c(-Inf,seq(rho1,rho2,length=lambda_length-1)))
@@ -733,8 +718,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
     if(!is.numeric(lambda_grid)) 
       stop("Grid for lambda values must contain numeric values.")
     if(any(lambda_grid<0)) 
-      stop("Grid for lambda values must contain non-negative 
-           values.")
+      stop("Grid for lambda values must contain non-negative values.")
     lambda_length = length(lambda_grid)
   }
   GCVfull <- Vectorize(
@@ -819,7 +803,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' \code{lambda} is selected using a specified cross-validation criterion.
 #'
 #' @param X Matrix of observed values of \code{X} of size 
-#'  \code{n}-times-{p}, one row per observation, columns corresponding to the 
+#'  \code{n}-times-\code{p}, one row per observation, columns corresponding to the 
 #'  positions in the rows of \code{tobs}.
 #'
 #' @param Y Vector of responses of length \code{n}.
@@ -853,7 +837,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #'  Works only if \code{custfun} is part of the input.}
 #'  }
 #'  
-#' @param vrs Version of the algorhitm to be used in function \link{HuberQp}; 
+#' @param vrs Version of the algorithm to be used in function \link{HuberQp}; 
 #' either \code{vrs="C"} for the \code{C++} version, or \code{vrs="R"} for the 
 #' \code{R} version. Both should give identical results, but the C++ version is (slightly) faster when finer discretizations are used.
 #' See \link{HuberQp} for further details.
@@ -897,7 +881,7 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 #' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
-#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #' 
 #' @details Function gives a faster (non-iterative) version of the solution
 #' of \link{ts_reg} when \code{type="Huber"} is used. This corresponds to 
@@ -932,9 +916,9 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' @seealso \link{ts_reg} for an iterative version of this method.
 #'
 #' @references
-#' Ioannis Kalogridis and Stanislav Nagy. (2023). Robust functional regression 
+#' Ioannis Kalogridis and Stanislav Nagy. (2025). Robust functional regression 
 #' with discretely sampled predictors. 
-#' \emph{Under review}.
+#' \emph{Computational Statistics and Data Analysis}, to appear.
 #'
 #' @examples
 #' n = 50      # sample size
@@ -948,10 +932,10 @@ ts_ridge = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' @export
 
 ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C", 
-                    plotCV=FALSE, lambda_grid=NULL,
-                    custfun=NULL, int_weights=TRUE, 
-                    I.method = "chull", I=NULL,
-                    OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
+                      plotCV=FALSE, lambda_grid=NULL,
+                      custfun=NULL, int_weights=TRUE, 
+                      I.method = "chull", I=NULL,
+                      OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -974,7 +958,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
   
   if(is.null(lambda_grid)){
     # define grid for search for lambda
-    rho1 = -28  # search range minimium exp(rho1)
+    rho1 = -28  # search range minimum exp(rho1)
     rho2 = -1   # search range maximum exp(rho2)
     lambda_length = 51
     lambda_grid = exp(c(-Inf,seq(rho1,rho2,length=lambda_length-1)))
@@ -982,15 +966,14 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
     if(!is.numeric(lambda_grid)) 
       stop("Grid for lambda values must contain numeric values.")
     if(any(lambda_grid<0)) 
-      stop("Grid for lambda values must contain non-negative 
-           values.")
+      stop("Grid for lambda values must contain non-negative values.")
     lambda_length = length(lambda_grid)
   }
   GCVfull <- Vectorize(
     function(x) GCV_HuberQp(x,
-                          Z = Z, Y = Y, H = H, vrs=vrs,
-                          custfun = custfun,
-                          OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
+                            Z = Z, Y = Y, H = H, vrs=vrs,
+                            custfun = custfun,
+                            OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
@@ -1069,7 +1052,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' \code{lambda} is selected using a specified cross-validation criterion.
 #'
 #' @param X Matrix of observed values of \code{X} of size 
-#'  \code{n}-times-{p}, one row per observation, columns corresponding to the 
+#'  \code{n}-times-\code{p}, one row per observation, columns corresponding to the 
 #'  positions in the rows of \code{tobs}.
 #'
 #' @param Y Vector of responses of length \code{n}.
@@ -1151,11 +1134,11 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' that contains \code{I}. If \code{I} is \code{NULL} (by default), then 
 #' \code{I} is taken to be the same as \code{x}. If \code{I.method=="box"}, 
 #' \code{I} can be specified also by a pair of real values \code{a<b}, 
-#' in which case we take \code{I} to be the axis-aligned sqare \code{[a,b]^d}.
+#' in which case we take \code{I} to be the axis-aligned square \code{[a,b]^d}.
 #' 
 #' @details Function gives a faster (non-iterative) version of the solution
-#' of \link{ts_reg} when \code{type="Huber"} is used. This corresponds to 
-#' the Huber version of an estimator.
+#' of \link{ts_reg} when \code{type="quantile"} is used. This corresponds to 
+#' the quantile version of an estimator.
 #'
 #' @return The output differs depending whether \code{jcv="all"} or 
 #' not. If a specific cross-validation method is selected (that is, 
@@ -1166,7 +1149,7 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #'  \item{"fitted"}{ A vector of \code{n} fitted values using the tuning 
 #'  parameter \code{lambda}.}
 #'  \item{"theta_hat"}{ A numerical matrix of size \code{p+1}-times-\code{1} of 
-#'  estimated regression coefficients from \link{HuberQp}.}
+#'  estimated regression coefficients from \link{QuantileQp}.}
 #'  \item{"beta_hat"}{ Estimate of the regression function \code{beta0} 
 #'  evaluated at the \code{p} points from \code{tobs}, where \code{X} was
 #'  observed.}
@@ -1197,15 +1180,15 @@ ts_HuberQp = function(X, Y, tobs, m, jcv = "all", vrs="C",
 #' Y = X[,1]   # response vector
 #' tobs = matrix(sort(runif(p)),ncol=1)
 #' 
-#' res = ts_HuberQp(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
+#' res = ts_QuantileQp(X, Y, tobs, m = 2, jcv = "all", plotCV = TRUE)
 #' 
 #' @export
 
 ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C", 
-                      plotCV=FALSE, lambda_grid=NULL,
-                      custfun=NULL, int_weights=TRUE, 
-                      I.method = "chull", I=NULL,
-                      OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
+                         plotCV=FALSE, lambda_grid=NULL,
+                         custfun=NULL, int_weights=TRUE, 
+                         I.method = "chull", I=NULL,
+                         OSQP_res_abs=1e-6,OSQP_res_rel=1e-6){
   jcv = match.arg(jcv,c("all", "AIC", "GCV", "GCV(tr)", "BIC", "rGCV", 
                         "rGCV(tr)", "custom"))
   if(jcv=="all") jcv = 0
@@ -1228,7 +1211,7 @@ ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C",
   
   if(is.null(lambda_grid)){
     # define grid for search for lambda
-    rho1 = -5  # search range minimium exp(rho1)
+    rho1 = -5   # search range minimum exp(rho1)
     rho2 = -1   # search range maximum exp(rho2)
     lambda_length = 10
     lambda_grid = exp(seq(rho1,rho2,length=lambda_length-1))
@@ -1236,15 +1219,14 @@ ts_QuantileQp = function(X, Y, tobs, m, alpha = 1/2, jcv = "all", vrs="C",
     if(!is.numeric(lambda_grid)) 
       stop("Grid for lambda values must contain numeric values.")
     if(any(lambda_grid<0)) 
-      stop("Grid for lambda values must contain non-negative 
-           values.")
+      stop("Grid for lambda values must contain non-negative values.")
     lambda_length = length(lambda_grid)
   }
   GCVfull <- Vectorize(
     function(x) GCV_QuantileQp(x,
-                            Z = Z, Y = Y, H = H, alpha=alpha, vrs=vrs,
-                            custfun = custfun,
-                            OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
+                               Z = Z, Y = Y, H = H, alpha=alpha, vrs=vrs,
+                               custfun = custfun,
+                               OSQP_res_abs=OSQP_res_abs,OSQP_res_rel=OSQP_res_rel))(lambda_grid)
   ncv = nrow(GCVfull)
   cvnames = c("AIC","GCV","GCV(tr)","BIC","rGCV","rGCV(tr)",
               "custom")
