@@ -33,10 +33,10 @@
 #' @param sd.noiseEps Standard deviation for the noise component \code{eps}. 
 #' Noise is generated to be centered Gaussian, independent of \code{X}.
 #' 
-#' @param obs_only Indictar of whether to generate the response \code{Y}
-#' the functions \code{X} and \code{beta0} should be used in the complete 
+#' @param obs_only Indicator of whether the response \code{Y} should be generated
+#' using the functions \code{X} and \code{beta0} in the complete 
 #' grid of size \code{p1^d} (\code{obs_only=FALSE}), or only in the grid 
-#' of size \code{p} where \code{X} is observed (\code{obs_only=FALSE}). By
+#' of size \code{p} where \code{X} is observed (\code{obs_only=TRUE}). By
 #' default set to \code{FALSE}.
 #' 
 #' @param p1 The complete size of the discretization grid where the 
@@ -49,7 +49,7 @@
 #' @param sd.noiseX Standard deviation of an additional noise component that is
 #' added to the regressors \code{X}. The final regressor functions are obtained
 #' by taking a linear combination of basis functions from \code{bfX} weighted
-#' by the coefficients from \code{bcX}, and then adding indepenent centered 
+#' by the coefficients from \code{bcX}, and then adding independent centered 
 #' normal noise to each of the \code{p1^d} of its values with standard
 #' deviation \code{sd.noiseX}. By default, \code{sd.noiseX = 0}.
 #' 
@@ -80,16 +80,16 @@
 #'  Interpretation of values as for the functions of \code{Xfull}.}
 #'  \item{"tfull"}{ A flattened matrix of the full grid of all observation 
 #'  points. A matrix of size \code{p1^d}-times-\code{d}, each row 
-#'  corersponding to the domain vector of a single point where \code{Xfull} and
+#'  corresponding to the domain vector of a single point where \code{Xfull} and
 #'  \code{betafull} are evaluated.}
 #'  \item{"betafull0"}{ A vector of all evaluated values of the function 
 #'  \code{beta0} in the complete grid of \code{p1^d} observation points. A 
 #'  numerical vector of length \code{p1^d}, each value corresponding to a 
-#'  row of \code{tfull}. Idential to a flattened version of \code{betafull}.}
+#'  row of \code{tfull}. Identical to a flattened version of \code{betafull}.}
 #'  \item{"truemean"}{ A vector of length \code{n} of the true conditional mean 
 #'  values of Y given the i-th regressor from \code{X}, without the intercept
 #'  \code{alpha0}.}
-#'  \item{"eps"}{ Vector of erros used in the regression. Naturally, 
+#'  \item{"eps"}{ Vector of errors used in the regression. Naturally, 
 #'  \code{Y = truemean + eps + alpha0}.}
 #'  \item{"d"}{ Dimension of the domain of regressors.}
 #' }
@@ -381,14 +381,9 @@ reconstruct = function(ts_prep = NULL,
 #'
 #' Given a discretely (and possibly) irregularly observed sample of functional
 #' data, this function performs thin-plate spline interpolation of each 
-#' functional datum. As an output, a matrix or function values of densely
-#' observed interpolated functional data in a common grid of the domain 
-#' is obtained.
+#' functional datum. As an output, a matrix of densely observed interpolated 
+#' functional data in a common grid of the domain is obtained.
 #' 
-# p.out = number of function values in the interpolated function in each d
-# I = c(a,b) for a complete domain of the form of the square [a,b]^d
-#'
-#'
 #' @param Xtobs A list of length \code{n}, each element of \code{Xtobs} is a 
 #' list with two elements corresponding to the \code{i}-th function: 
 #' (a) \code{X} A numerical vector of length \code{p} of observed values of 
@@ -419,7 +414,7 @@ reconstruct = function(ts_prep = NULL,
 #'  \item{"X"}{ A matrix of size \code{n}-times-\code{p.out^d} of the function
 #'  values of the densely evaluated interpolated data. One function per row.}
 #'  \item{"tobs"}{ A matrix of size \code{p.out^d}-times-\code{d} with all the
-#'  coodinates of the points where the function values are evaluated.
+#'  coordinates of the points where the function values are evaluated.
 #'  }
 #'  }
 #'
@@ -432,29 +427,29 @@ reconstruct = function(ts_prep = NULL,
 #' n = 10
 #' d = 1
 #'
-#'# Generating functions as random noise
-#'for(i in 1:n){
-#'  p = 10 + rpois(1, 5) # Number of observed points for the i-th function
-#'  tobs = matrix(runif(p*d),ncol=d) # Points in the domain
-#'  X = rnorm(p,sd=0.05) # Observed function values
-#'  Xtobs[[i]] = list(X=X, tobs=tobs)
-#'}
+#' # Generating functions as random noise
+#' for(i in 1:n){
+#'   p = 10 + rpois(1, 5) # Number of observed points for the i-th function
+#'   tobs = matrix(runif(p*d),ncol=d) # Points in the domain
+#'   X = rnorm(p,sd=0.05) # Observed function values
+#'   Xtobs[[i]] = list(X=X, tobs=tobs)
+#' }
 #'  
-#'# Thin-plate spline interpolation of order r=4
-#'intr = ts_interpolate(Xtobs, r = 4)
+#' # Thin-plate spline interpolation of order r=4
+#' intr = ts_interpolate(Xtobs, r = 4)
 #'  
-#'# Visalization of the i-th function
-#'i = 1
-#'if(d==1){
-#'  plot(Xtobs[[i]]$X~Xtobs[[i]]$tobs[,1])  
-#'  lines(intr$X[i,]~intr$tobs[,1])
-#'}
-#'if(d==2){
-#'  rgl::plot3d(Xtobs[[i]]$tobs[,1], Xtobs[[i]]$tobs[,2], Xtobs[[i]]$X)
-#'  rgl::points3d(intr$tobs[,1], intr$tobs[,2], intr$X[i,],col="red",add=TRUE)
-#'}
+#' # Visualization of the i-th function
+#' i = 1
+#' if(d==1){
+#'   plot(Xtobs[[i]]$X~Xtobs[[i]]$tobs[,1])  
+#'   lines(intr$X[i,]~intr$tobs[,1])
+#' }
+#' if(d==2){
+#'   rgl::plot3d(Xtobs[[i]]$tobs[,1], Xtobs[[i]]$tobs[,2], Xtobs[[i]]$X)
+#'   rgl::points3d(intr$tobs[,1], intr$tobs[,2], intr$X[i,],col="red",add=TRUE)
+#' }
 #'
-#'@export
+#' @export
 
 ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1), 
                           solve.method=c("C","R")){
@@ -522,7 +517,7 @@ ts_interpolate = function(Xtobs, r, p.out = 101, I=c(0,1),
 #' regression problem with discretely observed predictors. The estimator is 
 #' based on quantile regression applied in the context of functional principal
 #' components. The tuning parameter \code{J} (the number of principal 
-#' compontents chosen) is selected using cross-validation.
+#' components chosen) is selected using cross-validation.
 #'
 #' @param X Matrix of observed values of \code{X} of size 
 #'  \code{n}-times-{p}, one row per observation, columns corresponding to the 
