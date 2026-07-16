@@ -1,19 +1,62 @@
+# ==============================================================================
+# File: Makevars
+# Purpose: Compilation configuration for RobustSpline package (Unix/Linux/macOS)
+# 
+# This file configures the build process for compiling the RobustSpline C++
+# code with Rcpp/RcppArmadillo and the OSQP (Operator Splitting Quadratic
+# Programming) library for optimization routines.
+# 
+# Note: Windows systems use Makevars.win instead of this file.
+# ==============================================================================
 
-## With R 3.1.0 or later, you can uncomment the following line to tell R to
-## enable compilation with C++11 (where available)
-##
-## Also, OpenMP support in Armadillo prefers C++11 support. However, for wider
-## availability of the package we do not yet enforce this here.  It is however
-## recommended for client packages to set it.
-##
-## And with R 3.4.0, and RcppArmadillo 0.7.960.*, we turn C++11 on as OpenMP
-## support within Armadillo prefers / requires it
-##
-## R 4.0.0 made C++11 the default, R 4.1.0 switched to C++14, R 4.3.0 to C++17
-## _In general_ we should no longer need to set a standard as any recent R
-## installation will do the right thing. Should you need it, uncomment it and
-## set the appropriate value, possibly CXX17.
-#CXX_STD = CXX11
+# ==============================================================================
+# Directory Configuration
+# ==============================================================================
+# OSQP_DIR:   Root directory of the OSQP source code (vendored in package)
+# OSQP_BUILD: Build output directory for compiled OSQP objects
+# ==============================================================================
+OSQP_DIR = osqp
+OSQP_BUILD = $(OSQP_DIR)/build
 
+# ==============================================================================
+# Compiler Flags (C++ Preprocessor)
+# ==============================================================================
+# PKG_CPPFLAGS: Include paths for header files during preprocessing
+# 
+# -I$(OSQP_DIR)/include      : OSQP public headers (API definitions)
+# -I$(OSQP_DIR)/build/include: Generated headers from OSQP CMake build
+# ==============================================================================
+PKG_CPPFLAGS = -I$(OSQP_DIR)/include -I$(OSQP_DIR)/build/include
+
+# ==============================================================================
+# Linker Flags (Library Linking)
+# ==============================================================================
+# PKG_LIBS: Flags and libraries to link during the final linking stage
+#
+# $(SHLIB_OPENMP_CXXFLAGS): OpenMP support for parallelization
+#                           (used by Armadillo for parallel linear algebra)
+#
+# $(LAPACK_LIBS):           LAPACK library (linear algebra, factorizations)
+#                           Required by Armadillo and OSQP
+#
+# $(BLAS_LIBS):             BLAS library (basic linear algebra operations)
+#                           Required by Armadillo and OSQP
+#
+# $(FLIBS):                 Fortran runtime libraries
+#                           Required if LAPACK/BLAS use Fortran
+#
+# $(OSQP_BUILD)/out/libosqpstatic.a:
+#                           Static OSQP library (compiled during build)
+#                           This is the primary solver library for robust regression
+# ==============================================================================
+PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) $(OSQP_BUILD)/out/libosqpstatic.a
+
+# ==============================================================================
+# C++ Compiler Flags
+# ==============================================================================
+# PKG_CXXFLAGS: Additional C++ compiler flags
+#
+# $(SHLIB_OPENMP_CXXFLAGS): Enables OpenMP support in C++ code
+#                           Allows parallel loops and parallel matrix operations
+# ==============================================================================
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

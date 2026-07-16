@@ -1,0 +1,176 @@
+# ==============================================================================
+# RobustSpline .gitignore
+# Purpose: Prevent uploading of build artifacts, compiled objects, and local
+#          development files while preserving all source code.
+# ==============================================================================
+
+# ==============================================================================
+# R Package Build Artifacts
+# ==============================================================================
+# Object files from C/C++ compilation
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.lib
+*.out
+
+# Shared library files (various platforms)
+*.ko
+*.obj
+*.elf
+*.exe
+*.exp
+*.ilk
+*.map
+*.d
+*.gch
+*.pch
+*.su
+*.idb
+*.pdb
+*.la
+*.lo
+
+# Debug files (macOS)
+*.dSYM/
+
+# R-specific compilation
+src/*.o
+src/*.so
+src/**/*.o
+src/**/*.so
+src/**/*.a
+
+# ==============================================================================
+# R Session and History Files
+# ==============================================================================
+# These are local to the user's environment
+.Rhistory
+.Rapp.history
+.RData
+.Rproj.user/
+.Ruserdata
+.Rprofile
+.Renviron
+*.Rhistory
+
+# ==============================================================================
+# Build System Artifacts
+# ==============================================================================
+# OSQP and CMake build directories
+src/osqp/build/
+build/
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+CTestTestfile.cmake
+Makefile.in
+
+# ==============================================================================
+# IDE and Editor Configuration
+# ==============================================================================
+# Visual Studio Code
+.vscode/
+.vscode/**/*
+
+# RStudio specific
+.Rproj.user/
+*.Rproj
+
+# vim, vi
+.swp
+.swo
+*~
+.vim
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# IntelliJ
+.idea/
+*.iml
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Desktop.ini
+.directory
+
+# ==============================================================================
+# Temporary Files
+# ==============================================================================
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.~*
+
+# ==============================================================================
+# Package Installation and Distribution
+# ==============================================================================
+# Package binary distributions (built locally)
+*.tar.gz
+*.zip
+*.tgz
+
+# ==============================================================================
+# Kernel Module Compile Results (if applicable)
+# ==============================================================================
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# ==============================================================================
+# Varia
+# ==============================================================================
+# Node modules (if using Node.js build tools)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ==============================================================================
+# IMPORTANT: DO NOT IGNORE THESE (Source Code)
+# ==============================================================================
+# Make sure to keep all source files:
+# - *.cpp (C++ source files)
+# - *.h, *.hpp (Header files)
+# - *.R (R source files)
+# - *.f, *.f90 (Fortran files if any)
+# - CMakeLists.txt (CMake configuration)
+# - DESCRIPTION, NAMESPACE (R package metadata)
+# - All documentation files
+# - All configuration files (.Makevars, etc.)
+# ==============================================================================
