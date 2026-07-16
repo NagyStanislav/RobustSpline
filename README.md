@@ -24,7 +24,7 @@ help(package="RobustSpline")
 
 All major functions in the package are implemented both in R and in C++ for computational efficacy.
 
-- Ioannis Kalogridis and Stanislav Nagy. (2025). [Robust functional regression with discretely sampled predictors.](https://arxiv.org/abs/2311.13291) _Computational Statistics and Data Analysis,_ to appear.
+- Ioannis Kalogridis and Stanislav Nagy. (2025). [Robust functional regression with discretely sampled predictors.](https://arxiv.org/abs/2311.13291) _Computational Statistics and Data Analysis,_ DOI: 10.1016/j.csda.2025.108308.
 - Ioannis Kalogridis and Stanislav Nagy. (2025). Robust multidimensional location estimation from discretely sampled functional data.
 
 ## Regression for functional predictors and scalar response
@@ -34,7 +34,9 @@ Scalar-on-function regression with discretely observed functional data. Main fun
 * `IRLS` for the general *Iteratively Reweighted Least Squares* procedure for a (possibly penalized and robust) estimation in a linear model;
 * `ridge` for fast *Ridge Regression* with a given penalty matrix;
 * `ts_reg` for fitting robust thin-plate splines regression;
-* `ts_ridge` for fast fitting of non-robust thin-plate splines regression.
+* `ts_ridge` for fast fitting of non-robust thin-plate splines regression;
+* `ts_HuberQp` for fitting robust thin-plate splines regression with Huber loss based on quadratic programming.
+* `ts_QuantileQp` for fitting robust thin-plate splines regression with absolute/quantile loss based on quadratic programming.
 
 ### Thin-plate spline regression: One-dimensional functional data
 
@@ -96,7 +98,7 @@ system.time(fit.huber <- ts_reg(X = x[, sub.p], Y = y, tobs = tobs, m=2,
 # > 0.84    0.03    0.89
 ```
 
-Functions `ts_reg` and `ts_ridge` use cross-validation to find a value of the penalization parameter lambda. The criteria are always based on the residuals (`resids`) and hat values (`hats`) in the fitted models. Six different cross-validation methods (plus a custom method that can be provided to the functions) are implemented:
+Functions `ts_reg`,`ts_ridge`,`ts_HuberQp` and  `ts_QuantileQp` use cross-validation to find a value of the penalization parameter lambda. The criteria are always based on the residuals (`resids`) and hat values (`hats`) in the fitted models. Six different cross-validation methods (plus a custom method that can be provided to the functions) are implemented:
 1. "AIC" Akaike's information criterion given by `mean(resids^2)+2*mean(hats)`, where `n` is the length of both `resids` and `hats`.
 2. "GCV" Leave-one-out cross-validation criterion given by `mean((resids^2)/((1-hats)^2))`.
 3. "GCV(tr)" Modified leave-one-out cross-validation criterion given by `mean((resids^2)/((1-mean(hats))^2))`.
